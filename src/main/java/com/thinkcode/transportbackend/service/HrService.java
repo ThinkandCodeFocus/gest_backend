@@ -1,0 +1,81 @@
+package com.thinkcode.transportbackend.service;
+
+import com.thinkcode.transportbackend.dto.DriverAbsenceRequest;
+import com.thinkcode.transportbackend.entity.DriverAbsence;
+import com.thinkcode.transportbackend.repository.DriverAbsenceRepository;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.UUID;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+
+@Service
+public class HrService {
+
+    private final DriverAbsenceRepository driverAbsenceRepository;
+    private final DriverService driverService;
+    private final CompanyResolver companyResolver;
+    private final AuthenticatedCompanyProvider authenticatedCompanyProvider;
+    private final AuditLogService auditLogService;
+
+    public HrService(
+            DriverAbsenceRepository driverAbsenceRepository,
+            DriverService driverService,
+            CompanyResolver companyResolver,
+            AuthenticatedCompanyProvider authenticatedCompanyProvider,
+            AuditLogService auditLogService
+    ) {
+        this.driverAbsenceRepository = driverAbsenceRepository;
+        this.driverService = driverService;
+        this.companyResolver = companyResolver;
+        this.authenticatedCompanyProvider = authenticatedCompanyProvider;
+        this.auditLogService = auditLogService;
+    }
+
+    public List<DriverAbsence> findAbsences(LocalDate startDate, LocalDate endDate) {
+        UUID companyId = authenticatedCompanyProvider.requireCompanyId();
+        return driverAbsenceRepository.findAllByCompanyIdAndStartDateBetweenOrderByStartDateAsc(companyId, startDate, endDate);
+    }
+
+    public DriverAbsence createAbsence(DriverAbsenceRequest request) {
+        UUID companyId = authenticatedCompanyProvider.requireCompanyId();
+        if (request.endDate().isBefore(request.startDate())) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "endDate must be greater than or equal to startDate");
+        }
+
+        DriverAbsence absence = new DriverAbsence();
+        absence.setCompany(companyResolver.require(companyId));
+        absence.setDriver(driverService.findByIdForCompany(request.driverId(), companyId));
+        absence.setStartDate(request.startDate());
+        absence.setEndDate(request.endDate());
+        absence.setReason(request.reason());
+        absence.setApproved(request.approved());
+        DriverAbsence saved = driverAbsenceRepository.save(absence);
+        auditLogService.log("CREATE", "HR", saved.getId().toString(), null, "absence");
+        return saved;
+    }
+
+    public DriverAbsence updateAbsence(UUID absenceId, DriverAbsenceRequest request) {
+        UUID companyId = authenticatedCompanyProvider.requireCompanyId();
+        DriverAbsence absence = driverAbsenceRepository.findByIdAndCompanyId(absenceId, companyId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Absence not found"));
+        String before = absence.getStartDate() + "|" + absence.getEndDate() + "|" + absence.isApproved();
+
+        absence.setDriver(driverService.findByIdForCompany(request.driverId(), companyId));
+        absence.setStartDate(request.startDate());
+        absence.setEndDate(request.endDate());
+        absence.setReason(request.reason());
+        absence.setApproved(request.approved());
+        DriverAbsence saved = driverAbsenceRepository.save(absence);
+        auditLogService.log("UPDATE", "HR", saved.getId().toString(), before, saved.getStartDate() + "|" + saved.getEndDate() + "|" + saved.isApproved());
+        return saved;
+    }
+
+    public void deleteAbsence(UUID absenceId) {
+        UUID companyId = authenticatedCompanyProvider.requireCompanyId();
+        DriverAbsence absence = driverAbsenceRepository.findByIdAndCompanyId(absenceId, companyId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Absence not found"));
+        auditLogService.log("DELETE", "HR", absence.getId().toString(), absence.getReason(), null);
+        driverAbsenceRepository.delete(absence);
+    }
+}

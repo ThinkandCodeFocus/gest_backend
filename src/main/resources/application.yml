@@ -1,0 +1,42 @@
+spring:
+  application:
+    name: transport-backend
+  datasource:
+    url: jdbc:mysql://mysql-babacar.alwaysdata.net:3306/babacar_gest_trans?useSSL=true&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: babacar
+    password: Mbaye2002
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+    open-in-view: true
+  h2:
+    console:
+      enabled: false
+  mail:
+    host: ${MAIL_HOST:}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+server:
+  servlet:
+    context-path: /api
+
+app:
+  mail:
+    from: ${MAIL_FROM:no-reply@transport.local}
+  storage:
+    chat-dir: ${CHAT_STORAGE_DIR:uploads/chat}
+  security:
+    jwt-secret: 01234567890123456789012345678901
+    jwt-expiration-minutes: 480
