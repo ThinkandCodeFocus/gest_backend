@@ -39,7 +39,7 @@ public class DailyRevenueController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS_MANAGER', 'ASSISTANT', 'DRIVER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS_MANAGER', 'ASSISTANT')")
     public DailyRevenue create(@Valid @RequestBody DailyRevenueRequest request) {
         return dailyRevenueService.create(request);
     }
