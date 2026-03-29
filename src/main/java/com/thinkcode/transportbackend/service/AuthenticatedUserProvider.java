@@ -1,5 +1,6 @@
 package com.thinkcode.transportbackend.service;
 
+import com.thinkcode.transportbackend.entity.Company;
 import com.thinkcode.transportbackend.entity.UserAccount;
 import com.thinkcode.transportbackend.repository.UserAccountRepository;
 import org.springframework.http.HttpStatus;
@@ -25,5 +26,14 @@ public class AuthenticatedUserProvider {
         String email = authentication.getName();
         return userAccountRepository.findByEmail(email.toLowerCase())
                 .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "Authenticated user not found"));
+    }
+
+    public Company requireCompany() {
+        UserAccount user = requireUser();
+        Company company = user.getCompany();
+        if (company == null) {
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "User company not found");
+        }
+        return company;
     }
 }
