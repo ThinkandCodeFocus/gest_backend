@@ -13,5 +13,7 @@ public interface VehicleRepository extends JpaRepository<Vehicle, UUID> {
     Optional<Vehicle> findByIdAndCompanyId(UUID id, UUID companyId);
 
     Optional<Vehicle> findByMatricule(String matricule);
+
+    List<Vehicle> findByCompanyIdAndClientId(UUID companyId, UUID clientId);
 }
 

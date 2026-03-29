@@ -11,5 +11,7 @@ public interface ClientRepository extends JpaRepository<Client, UUID> {
     List<Client> findAllByCompanyId(UUID companyId);
 
     Optional<Client> findByIdAndCompanyId(UUID id, UUID companyId);
+
+    Optional<Client> findByCompanyIdAndEmail(UUID companyId, String email);
 }
 
