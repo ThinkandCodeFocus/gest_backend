@@ -69,6 +69,10 @@ class VehicleServiceOwnershipTest {
                 null,
                 null,
                 null,
+                null,
+                null,
+                null,
+                null,
                 BigDecimal.ZERO,
                 null,
                 BigDecimal.ZERO

@@ -8,6 +8,7 @@ public record NotificationResponse(
         UUID id,
         String title,
         String message,
+        String link,
         NotificationType type,
         boolean read,
         Instant createdAt

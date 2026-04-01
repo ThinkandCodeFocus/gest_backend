@@ -33,10 +33,27 @@ public class MaintenanceRecord extends BaseEntity {
     @Column(nullable = false)
     private String description;
 
+    @Column(nullable = false)
+    private BigDecimal partsCost = BigDecimal.ZERO;
+
+    @Column(nullable = false)
+    private BigDecimal laborCost = BigDecimal.ZERO;
+
+    @Column(nullable = false)
+    private Integer pieceCount = 1;
+
+    private String provider;
+
     private String documentUrl;
 
     @Column(nullable = false)
     private boolean suspectedDuplicate;
+
+    @Column(length = 2000)
+    private String fraudReason;
+
+    @Column(length = 6000)
+    private String pieceLinesJson;
 
     public Vehicle getVehicle() {
         return vehicle;
@@ -78,6 +95,38 @@ public class MaintenanceRecord extends BaseEntity {
         this.description = description;
     }
 
+    public BigDecimal getPartsCost() {
+        return partsCost;
+    }
+
+    public void setPartsCost(BigDecimal partsCost) {
+        this.partsCost = partsCost;
+    }
+
+    public BigDecimal getLaborCost() {
+        return laborCost;
+    }
+
+    public void setLaborCost(BigDecimal laborCost) {
+        this.laborCost = laborCost;
+    }
+
+    public Integer getPieceCount() {
+        return pieceCount;
+    }
+
+    public void setPieceCount(Integer pieceCount) {
+        this.pieceCount = pieceCount;
+    }
+
+    public String getProvider() {
+        return provider;
+    }
+
+    public void setProvider(String provider) {
+        this.provider = provider;
+    }
+
     public String getDocumentUrl() {
         return documentUrl;
     }
@@ -92,6 +141,22 @@ public class MaintenanceRecord extends BaseEntity {
 
     public void setSuspectedDuplicate(boolean suspectedDuplicate) {
         this.suspectedDuplicate = suspectedDuplicate;
+    }
+
+    public String getFraudReason() {
+        return fraudReason;
+    }
+
+    public void setFraudReason(String fraudReason) {
+        this.fraudReason = fraudReason;
+    }
+
+    public String getPieceLinesJson() {
+        return pieceLinesJson;
+    }
+
+    public void setPieceLinesJson(String pieceLinesJson) {
+        this.pieceLinesJson = pieceLinesJson;
     }
 }
 

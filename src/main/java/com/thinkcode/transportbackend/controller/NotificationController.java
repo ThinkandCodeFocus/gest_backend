@@ -5,6 +5,7 @@ import com.thinkcode.transportbackend.dto.NotificationResponse;
 import com.thinkcode.transportbackend.service.NotificationService;
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -29,7 +30,7 @@ public class NotificationController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS_MANAGER', 'ASSISTANT', 'DRIVER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS_MANAGER', 'ASSISTANT', 'DRIVER', 'CLIENT')")
     public List<NotificationResponse> findAll(@RequestParam(defaultValue = "false") boolean unreadOnly) {
         return notificationService.findAll(unreadOnly);
     }
@@ -41,13 +42,25 @@ public class NotificationController {
     }
 
     @PatchMapping("/{notificationId}/read")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS_MANAGER', 'ASSISTANT', 'DRIVER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS_MANAGER', 'ASSISTANT', 'DRIVER', 'CLIENT')")
     public NotificationResponse markAsRead(@PathVariable UUID notificationId) {
         return notificationService.markAsRead(notificationId);
     }
 
+    @PatchMapping("/read-all")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS_MANAGER', 'ASSISTANT', 'DRIVER', 'CLIENT')")
+    public List<NotificationResponse> readAll() {
+        return notificationService.readAll();
+    }
+
+    @GetMapping("/unread-count")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS_MANAGER', 'ASSISTANT', 'DRIVER', 'CLIENT')")
+    public Map<String, Long> unreadCount() {
+        return notificationService.unreadCount();
+    }
+
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS_MANAGER', 'ASSISTANT', 'DRIVER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS_MANAGER', 'ASSISTANT', 'DRIVER', 'CLIENT')")
     public SseEmitter stream() {
         return notificationService.subscribe();
     }

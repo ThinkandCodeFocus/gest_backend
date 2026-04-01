@@ -1,6 +1,7 @@
 package com.thinkcode.transportbackend.controller;
 
 import com.thinkcode.transportbackend.dto.RevenueRuleRequest;
+import com.thinkcode.transportbackend.dto.RevenueRuleResponse;
 import com.thinkcode.transportbackend.dto.SystemSettingRequest;
 import com.thinkcode.transportbackend.entity.RevenueRule;
 import com.thinkcode.transportbackend.entity.SystemSetting;
@@ -53,26 +54,26 @@ public class SettingsController {
     // Revenue Rules - ADMIN ONLY
     @GetMapping("/revenue-rules")
     @PreAuthorize("hasRole('ADMIN')")
-    public List<RevenueRule> getRevenueRules() {
+    public List<RevenueRuleResponse> getRevenueRules() {
         UUID companyId = authenticatedCompanyProvider.requireCompanyId();
-        return revenueRuleService.findByCompanyId(companyId);
+        return revenueRuleService.findResponsesByCompanyId(companyId);
     }
 
     @PostMapping("/revenue-rules")
     @PreAuthorize("hasRole('ADMIN')")
-    public RevenueRule createRevenueRule(@Valid @RequestBody RevenueRuleRequest request) {
+    public RevenueRuleResponse createRevenueRule(@Valid @RequestBody RevenueRuleRequest request) {
         UUID companyId = authenticatedCompanyProvider.requireCompanyId();
         RevenueRule rule = new RevenueRule();
         rule.setRuleType(request.ruleType());
         rule.setRuleValue(request.ruleValue());
         rule.setDescription(request.description());
         rule.setActive(request.active() != null ? request.active() : true);
-        return revenueRuleService.save(companyId, rule);
+        return revenueRuleService.saveResponse(companyId, rule);
     }
 
     @PutMapping("/revenue-rules/{ruleId}")
     @PreAuthorize("hasRole('ADMIN')")
-    public RevenueRule updateRevenueRule(
+    public RevenueRuleResponse updateRevenueRule(
             @PathVariable UUID ruleId,
             @Valid @RequestBody RevenueRuleRequest request
     ) {
@@ -80,7 +81,7 @@ public class SettingsController {
         rule.setRuleValue(request.ruleValue());
         rule.setDescription(request.description());
         rule.setActive(request.active());
-        return revenueRuleService.update(ruleId, rule);
+        return revenueRuleService.updateResponse(ruleId, rule);
     }
 
     @DeleteMapping("/revenue-rules/{ruleId}")
@@ -105,10 +106,12 @@ public class SettingsController {
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS_MANAGER', 'ASSISTANT')")
     public List<String> getDayStatuses() {
         return java.util.Arrays.asList(
-            "WORKING",
-            "WEEKEND",
-            "HOLIDAY",
-            "OFF"
+            "ACTIVE",
+            "RAIN",
+            "BREAKDOWN",
+            "SICK",
+            "PARKED",
+            "MEETING"
         );
     }
 }

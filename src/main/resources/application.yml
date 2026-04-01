@@ -1,10 +1,12 @@
 spring:
   application:
     name: transport-backend
+  config:
+    import: optional:file:.env[.properties]
   datasource:
-    url: jdbc:mysql://mysql-babacar.alwaysdata.net:3306/babacar_gest_trans?useSSL=true&serverTimezone=UTC&allowPublicKeyRetrieval=true
-    username: babacar
-    password: Mbaye2002
+    url: ${DB_URL:jdbc:mysql://localhost:3306/transport_backend?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
@@ -29,6 +31,7 @@ spring:
             enable: true
 
 server:
+  port: ${SERVER_PORT:8080}
   servlet:
     context-path: /api
 
@@ -37,6 +40,8 @@ app:
     from: ${MAIL_FROM:no-reply@transport.local}
   storage:
     chat-dir: ${CHAT_STORAGE_DIR:uploads/chat}
+  cors:
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:3000,http://127.0.0.1:3000}
   security:
-    jwt-secret: 01234567890123456789012345678901
+    jwt-secret: ${JWT_SECRET:change-this-secret-in-production}
     jwt-expiration-minutes: 480

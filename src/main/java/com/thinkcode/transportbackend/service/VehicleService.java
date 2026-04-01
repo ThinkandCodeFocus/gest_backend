@@ -1,5 +1,6 @@
 package com.thinkcode.transportbackend.service;
 
+import com.thinkcode.transportbackend.dto.VehicleResponse;
 import com.thinkcode.transportbackend.entity.Vehicle;
 import com.thinkcode.transportbackend.entity.VehicleStatus;
 import com.thinkcode.transportbackend.repository.VehicleRepository;
@@ -33,8 +34,8 @@ public class VehicleService {
         this.authenticatedCompanyProvider = authenticatedCompanyProvider;
     }
 
-    public List<Vehicle> findAll(UUID companyId) {
-        return vehicleRepository.findAllByCompanyId(companyId);
+    public List<VehicleResponse> findAll(UUID companyId) {
+        return vehicleRepository.findAllByCompanyId(companyId).stream().map(this::toResponse).toList();
     }
 
     public Vehicle findById(UUID id) {
@@ -65,9 +66,25 @@ public class VehicleService {
 
         if (request.driverId() != null) {
             vehicle.setDriver(driverService.findByIdForCompany(request.driverId(), authenticatedCompanyId));
+        } else if (request.driverName() != null && !request.driverName().isBlank()) {
+            vehicle.setDriver(driverService.findByNameForCompany(request.driverName(), authenticatedCompanyId));
         }
         if (request.clientId() != null) {
-            vehicle.setClient(clientService.findByIdForCompany(request.clientId(), authenticatedCompanyId));
+            var client = clientService.findByIdForCompany(request.clientId(), authenticatedCompanyId);
+            if (request.clientEmail() != null && !request.clientEmail().isBlank()) {
+                client.setEmail(request.clientEmail().trim());
+            }
+            if (request.clientPhoneNumber() != null && !request.clientPhoneNumber().isBlank()) {
+                client.setPhoneNumber(request.clientPhoneNumber().trim());
+            }
+            vehicle.setClient(client);
+        } else if (request.clientName() != null && !request.clientName().isBlank()) {
+            vehicle.setClient(clientService.findOrCreateForCompany(
+                    authenticatedCompanyId,
+                    request.clientName(),
+                    request.clientEmail(),
+                    request.clientPhoneNumber()
+            ));
         }
         return vehicleRepository.save(vehicle);
     }
@@ -93,12 +110,28 @@ public class VehicleService {
 
         if (request.driverId() != null) {
             vehicle.setDriver(driverService.findByIdForCompany(request.driverId(), authenticatedCompanyId));
+        } else if (request.driverName() != null && !request.driverName().isBlank()) {
+            vehicle.setDriver(driverService.findByNameForCompany(request.driverName(), authenticatedCompanyId));
         } else {
             vehicle.setDriver(null);
         }
 
         if (request.clientId() != null) {
-            vehicle.setClient(clientService.findByIdForCompany(request.clientId(), authenticatedCompanyId));
+            var client = clientService.findByIdForCompany(request.clientId(), authenticatedCompanyId);
+            if (request.clientEmail() != null && !request.clientEmail().isBlank()) {
+                client.setEmail(request.clientEmail().trim());
+            }
+            if (request.clientPhoneNumber() != null && !request.clientPhoneNumber().isBlank()) {
+                client.setPhoneNumber(request.clientPhoneNumber().trim());
+            }
+            vehicle.setClient(client);
+        } else if (request.clientName() != null && !request.clientName().isBlank()) {
+            vehicle.setClient(clientService.findOrCreateForCompany(
+                    authenticatedCompanyId,
+                    request.clientName(),
+                    request.clientEmail(),
+                    request.clientPhoneNumber()
+            ));
         } else {
             vehicle.setClient(null);
         }
@@ -110,6 +143,32 @@ public class VehicleService {
         UUID authenticatedCompanyId = authenticatedCompanyProvider.requireCompanyId();
         Vehicle vehicle = findByIdForCompany(vehicleId, authenticatedCompanyId);
         vehicleRepository.delete(vehicle);
+    }
+
+    public VehicleResponse toResponse(Vehicle vehicle) {
+        return new VehicleResponse(
+                vehicle.getId(),
+                vehicle.getMatricule(),
+                vehicle.getType() == null ? null : switch (vehicle.getType()) {
+                    case CAR -> "Voiture";
+                    case MOTO_TAXI -> "Moto-taxi";
+                    case MOTORBIKE -> "Moto";
+                },
+                vehicle.getDriver() == null ? null : vehicle.getDriver().getId(),
+                vehicle.getDriver() == null ? null : vehicle.getDriver().getFullName(),
+                vehicle.getClient() == null ? null : vehicle.getClient().getId(),
+                vehicle.getClient() == null ? null : vehicle.getClient().getName(),
+                vehicle.getClient() == null ? null : vehicle.getClient().getEmail(),
+                vehicle.getClient() == null ? null : vehicle.getClient().getPhoneNumber(),
+                vehicle.getStartDate(),
+                vehicle.getAmortization(),
+                vehicle.getStatus() == null ? null : switch (vehicle.getStatus()) {
+                    case AVAILABLE, ASSIGNED -> "Actif";
+                    case IN_MAINTENANCE -> "Maintenance";
+                    case OUT_OF_SERVICE -> "Panne";
+                },
+                vehicle.getDailyTarget()
+        );
     }
 }
 

@@ -33,6 +33,12 @@ public class Debt extends BaseEntity {
     @Column(nullable = false)
     private String reason;
 
+    @Column(nullable = false)
+    private String beneficiary = "chauffeur";
+
+    @Column(nullable = false)
+    private String typeDebt = "Regularisation";
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private DebtStatus status = DebtStatus.OPEN;
@@ -78,6 +84,22 @@ public class Debt extends BaseEntity {
 
     public void setReason(String reason) {
         this.reason = reason;
+    }
+
+    public String getBeneficiary() {
+        return beneficiary;
+    }
+
+    public void setBeneficiary(String beneficiary) {
+        this.beneficiary = beneficiary;
+    }
+
+    public String getTypeDebt() {
+        return typeDebt;
+    }
+
+    public void setTypeDebt(String typeDebt) {
+        this.typeDebt = typeDebt;
     }
 
     public DebtStatus getStatus() {

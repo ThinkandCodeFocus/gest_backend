@@ -36,6 +36,12 @@ public class DailyRevenue extends BaseEntity {
     @Column(nullable = false)
     private BigDecimal companyShare = BigDecimal.ZERO;
 
+    @Column(nullable = false)
+    private BigDecimal clientShare = BigDecimal.ZERO;
+
+    @Column(nullable = false)
+    private BigDecimal generatedDebt = BigDecimal.ZERO;
+
     private String note;
 
     public Vehicle getVehicle() {
@@ -84,6 +90,22 @@ public class DailyRevenue extends BaseEntity {
 
     public void setCompanyShare(BigDecimal companyShare) {
         this.companyShare = companyShare;
+    }
+
+    public BigDecimal getClientShare() {
+        return clientShare;
+    }
+
+    public void setClientShare(BigDecimal clientShare) {
+        this.clientShare = clientShare;
+    }
+
+    public BigDecimal getGeneratedDebt() {
+        return generatedDebt;
+    }
+
+    public void setGeneratedDebt(BigDecimal generatedDebt) {
+        this.generatedDebt = generatedDebt;
     }
 
     public String getNote() {

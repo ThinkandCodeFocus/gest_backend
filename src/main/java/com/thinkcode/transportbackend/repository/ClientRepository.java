@@ -13,5 +13,7 @@ public interface ClientRepository extends JpaRepository<Client, UUID> {
     Optional<Client> findByIdAndCompanyId(UUID id, UUID companyId);
 
     Optional<Client> findByCompanyIdAndEmail(UUID companyId, String email);
+
+    Optional<Client> findByCompanyIdAndNameIgnoreCase(UUID companyId, String name);
 }
 

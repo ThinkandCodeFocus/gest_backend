@@ -6,6 +6,7 @@ import com.thinkcode.transportbackend.entity.Notification;
 import com.thinkcode.transportbackend.entity.NotificationType;
 import com.thinkcode.transportbackend.repository.NotificationRepository;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -47,14 +48,19 @@ public class NotificationService {
 
     public NotificationResponse create(NotificationCreateRequest request) {
         UUID companyId = authenticatedCompanyProvider.requireCompanyId();
-        return createForCompany(companyId, request.title(), request.message(), request.type());
+        return createForCompany(companyId, request.title(), request.message(), request.link(), request.type());
     }
 
     public NotificationResponse createForCompany(UUID companyId, String title, String message, NotificationType type) {
+        return createForCompany(companyId, title, message, null, type);
+    }
+
+    public NotificationResponse createForCompany(UUID companyId, String title, String message, String link, NotificationType type) {
         Notification notification = new Notification();
         notification.setCompany(companyResolver.require(companyId));
         notification.setTitle(title);
         notification.setMessage(message);
+        notification.setLink(link);
         notification.setType(type == null ? NotificationType.INFO : type);
 
         Notification saved = notificationRepository.save(notification);
@@ -68,7 +74,7 @@ public class NotificationService {
         Notification notification = notificationRepository.findByIdAndCompanyId(notificationId, companyId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Notification not found"));
         notification.setRead(true);
-        return toResponse(notification);
+        return toResponse(notificationRepository.save(notification));
     }
 
     public org.springframework.web.servlet.mvc.method.annotation.SseEmitter subscribe() {
@@ -76,11 +82,25 @@ public class NotificationService {
         return notificationRealtimeService.subscribe(companyId);
     }
 
+    public Map<String, Long> unreadCount() {
+        UUID companyId = authenticatedCompanyProvider.requireCompanyId();
+        return Map.of("unreadCount", notificationRepository.countByCompanyIdAndRead(companyId, false));
+    }
+
+    public List<NotificationResponse> readAll() {
+        UUID companyId = authenticatedCompanyProvider.requireCompanyId();
+        List<Notification> notifications = notificationRepository.findAllByCompanyIdAndReadOrderByCreatedAtDesc(companyId, false);
+        notifications.forEach(notification -> notification.setRead(true));
+        notificationRepository.saveAll(notifications);
+        return notifications.stream().map(this::toResponse).toList();
+    }
+
     private NotificationResponse toResponse(Notification notification) {
         return new NotificationResponse(
                 notification.getId(),
                 notification.getTitle(),
                 notification.getMessage(),
+                notification.getLink(),
                 notification.getType(),
                 notification.isRead(),
                 notification.getCreatedAt()

@@ -1,9 +1,10 @@
 package com.thinkcode.transportbackend.controller;
 
+import com.thinkcode.transportbackend.dto.VehicleRequest;
+import com.thinkcode.transportbackend.dto.VehicleResponse;
 import com.thinkcode.transportbackend.entity.Vehicle;
 import com.thinkcode.transportbackend.service.AuthenticatedCompanyProvider;
 import com.thinkcode.transportbackend.service.VehicleService;
-import com.thinkcode.transportbackend.dto.VehicleRequest;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
@@ -31,20 +32,20 @@ public class VehicleController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS_MANAGER', 'ASSISTANT')")
-    public List<Vehicle> findAll() {
+    public List<VehicleResponse> findAll() {
         return vehicleService.findAll(authenticatedCompanyProvider.requireCompanyId());
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS_MANAGER')")
-    public Vehicle create(@Valid @RequestBody VehicleRequest request) {
-        return vehicleService.create(request);
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS_MANAGER', 'ASSISTANT')")
+    public VehicleResponse create(@Valid @RequestBody VehicleRequest request) {
+        return vehicleService.toResponse(vehicleService.create(request));
     }
 
     @PutMapping("/{vehicleId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS_MANAGER')")
-    public Vehicle update(@PathVariable UUID vehicleId, @Valid @RequestBody VehicleRequest request) {
-        return vehicleService.update(vehicleId, request);
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS_MANAGER', 'ASSISTANT')")
+    public VehicleResponse update(@PathVariable UUID vehicleId, @Valid @RequestBody VehicleRequest request) {
+        return vehicleService.toResponse(vehicleService.update(vehicleId, request));
     }
 
     @DeleteMapping("/{vehicleId}")

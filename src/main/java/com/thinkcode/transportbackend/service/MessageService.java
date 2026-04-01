@@ -38,7 +38,7 @@ public class MessageService {
     public List<UserAccount> getContacts() {
         UUID companyId = authenticatedCompanyProvider.requireCompanyId();
         UserAccount user = authenticatedUserProvider.requireUser();
-        return messageRepository.findContacts(companyId, user.getId());
+        return userAccountRepository.findAllByCompanyIdAndIdNotOrderByFullNameAsc(companyId, user.getId());
     }
 
     /**
@@ -121,6 +121,12 @@ public class MessageService {
         UUID companyId = authenticatedCompanyProvider.requireCompanyId();
         UserAccount user = authenticatedUserProvider.requireUser();
         return messageRepository.countUnreadMessages(companyId, user.getId());
+    }
+
+    public List<Message> getRecentMessages(int limit) {
+        UUID companyId = authenticatedCompanyProvider.requireCompanyId();
+        UserAccount user = authenticatedUserProvider.requireUser();
+        return messageRepository.findRecentMessages(companyId, user.getId(), PageRequest.of(0, limit));
     }
 
     /**

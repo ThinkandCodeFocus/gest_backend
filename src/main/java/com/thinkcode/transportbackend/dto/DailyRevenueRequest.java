@@ -11,6 +11,10 @@ public record DailyRevenueRequest(
         @NotNull LocalDate revenueDate,
         @NotNull BigDecimal amount,
         @NotNull ActivityStatus activityStatus,
+        BigDecimal driverShare,
+        BigDecimal companyShare,
+        BigDecimal clientShare,
+        BigDecimal generatedDebt,
         String note
 ) {
 }

@@ -60,7 +60,7 @@ class NotificationServiceTest {
         when(notificationRepository.save(org.mockito.ArgumentMatchers.any(Notification.class))).thenReturn(saved);
 
         NotificationResponse response = notificationService.create(
-                new NotificationCreateRequest("Alerte", "Nouvelle alerte", NotificationType.WARNING)
+                new NotificationCreateRequest("Alerte", "Nouvelle alerte", "/dashboard/maintenance", NotificationType.WARNING)
         );
 
         assertEquals("Alerte", response.title());

@@ -48,4 +48,36 @@ public class ReportingController {
                 )
                 .body(content);
     }
+
+    @GetMapping("/overview.xlsx")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS_MANAGER', 'ASSISTANT')")
+    public ResponseEntity<byte[]> exportOverviewExcel(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
+    ) {
+        byte[] content = reportingService.exportExcel(startDate, endDate);
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("application/vnd.ms-excel"))
+                .header(
+                        HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.attachment().filename("overview.xls").build().toString()
+                )
+                .body(content);
+    }
+
+    @GetMapping("/overview.pdf")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS_MANAGER', 'ASSISTANT')")
+    public ResponseEntity<byte[]> exportOverviewPdf(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
+    ) {
+        byte[] content = reportingService.exportPdf(startDate, endDate);
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(
+                        HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.attachment().filename("overview.pdf").build().toString()
+                )
+                .body(content);
+    }
 }

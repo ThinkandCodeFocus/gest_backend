@@ -13,4 +13,6 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
     List<Notification> findAllByCompanyIdAndReadOrderByCreatedAtDesc(UUID companyId, boolean read);
 
     Optional<Notification> findByIdAndCompanyId(UUID notificationId, UUID companyId);
+
+    long countByCompanyIdAndRead(UUID companyId, boolean read);
 }

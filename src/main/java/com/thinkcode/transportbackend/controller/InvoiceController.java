@@ -1,9 +1,12 @@
 package com.thinkcode.transportbackend.controller;
 
 import com.thinkcode.transportbackend.dto.InvoiceEmailRequest;
+import com.thinkcode.transportbackend.dto.InvoiceMessageRequest;
+import com.thinkcode.transportbackend.dto.InvoiceSummaryResponse;
 import com.thinkcode.transportbackend.service.InvoiceService;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -29,6 +32,15 @@ public class InvoiceController {
         this.invoiceService = invoiceService;
     }
 
+    @GetMapping("/summary")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS_MANAGER', 'ASSISTANT', 'CLIENT')")
+    public List<InvoiceSummaryResponse> summary(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
+    ) {
+        return invoiceService.getInvoiceSummaries(startDate, endDate);
+    }
+
     @GetMapping("/pdf")
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS_MANAGER', 'ASSISTANT')")
     public ResponseEntity<byte[]> downloadPdf(
@@ -38,6 +50,52 @@ public class InvoiceController {
     ) {
         byte[] pdf = invoiceService.generateInvoicePdf(clientId, startDate, endDate);
         String fileName = "facture-" + clientId + "-" + startDate + "-" + endDate + ".pdf";
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment().filename(fileName).build().toString())
+                .body(pdf);
+    }
+
+    @GetMapping("/repair-report/pdf")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS_MANAGER', 'ASSISTANT')")
+    public ResponseEntity<byte[]> downloadRepairReportPdf(
+            @RequestParam UUID clientId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
+    ) {
+        byte[] pdf = invoiceService.generateRepairReportPdf(clientId, startDate, endDate);
+        String fileName = "suivi-reparations-" + clientId + "-" + startDate + "-" + endDate + ".pdf";
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment().filename(fileName).build().toString())
+                .body(pdf);
+    }
+
+    @GetMapping("/client/pdf")
+    @PreAuthorize("hasRole('CLIENT')")
+    public ResponseEntity<byte[]> downloadClientPdf(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
+    ) {
+        byte[] pdf = invoiceService.generateAuthenticatedClientInvoicePdf(startDate, endDate);
+        String fileName = "facture-client-" + startDate + "-" + endDate + ".pdf";
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment().filename(fileName).build().toString())
+                .body(pdf);
+    }
+
+    @GetMapping("/client/repair-report/pdf")
+    @PreAuthorize("hasRole('CLIENT')")
+    public ResponseEntity<byte[]> downloadClientRepairReportPdf(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
+    ) {
+        byte[] pdf = invoiceService.generateAuthenticatedClientRepairReportPdf(startDate, endDate);
+        String fileName = "suivi-reparations-client-" + startDate + "-" + endDate + ".pdf";
 
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_PDF)
@@ -55,5 +113,16 @@ public class InvoiceController {
                 request.recipientEmail()
         );
         return Map.of("status", "sent");
+    }
+
+    @PostMapping("/message")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS_MANAGER', 'ASSISTANT')")
+    public Map<String, String> sendToClientMessages(@Valid @RequestBody InvoiceMessageRequest request) {
+        invoiceService.sendInvoiceToClientMessages(
+                request.clientId(),
+                request.startDate(),
+                request.endDate()
+        );
+        return Map.of("status", "sent_to_messages");
     }
 }

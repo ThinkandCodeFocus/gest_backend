@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.UUID;
+import org.springframework.data.domain.Pageable;
 
 @Repository
 public interface MessageRepository extends JpaRepository<Message, UUID> {
@@ -42,6 +43,15 @@ public interface MessageRepository extends JpaRepository<Message, UUID> {
     long countUnreadMessages(
         @Param("companyId") UUID companyId,
         @Param("userId") UUID userId
+    );
+
+    @Query("SELECT m FROM Message m WHERE m.company.id = :companyId " +
+           "AND (m.sender.id = :userId OR m.recipient.id = :userId) " +
+           "ORDER BY m.createdAt DESC")
+    List<Message> findRecentMessages(
+        @Param("companyId") UUID companyId,
+        @Param("userId") UUID userId,
+        Pageable pageable
     );
 
     // Find unread messages from specific sender

@@ -1,18 +1,20 @@
 # ERP Gestion de Flotte - Backend Spring Boot
 
-Ce dépôt contient une base backend Spring Boot pour le projet décrit dans `CC.pdf`.
+Ce backend est maintenant aligne sur le front actuel sans modification du front.
 
-## Modules couverts dans cette première version
+## Couverture fonctionnelle
 
-- authentification JWT et rôles
-- gestion multi-entreprise
-- véhicules
-- chauffeurs
-- clients
-- recettes journalières
-- maintenances
+- authentification JWT et roles
+- dashboards par role
+- vehicules, chauffeurs, clients
+- recettes journalieres avec dette automatique
+- maintenances detaillees avec pieces, M.O. et alertes anti-fraude
 - dettes
-- tableau de bord synthétique
+- planning evenementiel et plannings derives
+- messagerie directe entre acteurs
+- notifications
+- facturation PDF et envoi dans messagerie interne
+- portail client mensuel detaille
 
 ## Stack
 
@@ -21,66 +23,86 @@ Ce dépôt contient une base backend Spring Boot pour le projet décrit dans `CC
 - Spring Web
 - Spring Data JPA
 - Spring Security
-- H2 en local
-- PostgreSQL prêt pour la prod
+- MySQL
+
+## Configuration
+
+Les secrets ne doivent plus etre commits en dur.
+
+Variables utilisees:
+
+- `DB_URL`
+- `DB_USERNAME`
+- `DB_PASSWORD`
+- `JWT_SECRET`
+- `MAIL_HOST`
+- `MAIL_PORT`
+- `MAIL_USERNAME`
+- `MAIL_PASSWORD`
+- `MAIL_FROM`
+- `CHAT_STORAGE_DIR`
+
+Exemple dans [`.env.example`](C:/Users/Serigne%20Mbaye%20Sy/Downloads/gest_backend/.env.example).
 
 ## Lancer le projet
 
-Vous pouvez lancer le projet avec Maven.
-
-```bash
-mvn spring-boot:run
+```powershell
+$env:JAVA_HOME="C:\Path\To\JDK"
+$env:Path="$env:JAVA_HOME\bin;$env:Path"
+.\mvnw.cmd -DskipTests compile
+.\mvnw.cmd spring-boot:run
 ```
 
-Une structure type wrapper Maven est aussi présente :
+Base URL:
 
-- `.mvn/wrapper/maven-wrapper.properties`
-- `mvnw`
-- `mvnw.cmd`
+- `http://localhost:8080/api`
 
-L'API démarre sur `http://localhost:8080/api`.
+## Endpoints clefs
 
-## Comptes de démonstration
+### Auth
 
-Un administrateur est injecté au démarrage :
+- `POST /api/auth/login`
+- `GET /api/auth/me`
 
-- email : `admin@demo.local`
-- mot de passe : `admin123`
+### Planning
 
-## Endpoints de départ
+- `GET /api/planning/events`
+- `POST /api/planning/events`
 
-- `POST /auth/login`
-- `GET /vehicles`
-- `POST /vehicles`
-- `GET /drivers`
-- `POST /drivers`
-- `GET /clients`
-- `POST /clients`
-- `GET /revenues`
-- `POST /revenues`
-- `GET /maintenances`
-- `POST /maintenances`
-- `GET /debts`
-- `GET /dashboard`
+### Maintenance
 
-## Structure du projet
+- `GET /api/maintenances`
+- `GET /api/maintenances/alerts`
+- `POST /api/maintenances`
 
-- `src/main/java/com/thinkcode/transportbackend/controller`
-- `src/main/java/com/thinkcode/transportbackend/dto`
-- `src/main/java/com/thinkcode/transportbackend/entity`
-- `src/main/java/com/thinkcode/transportbackend/repository`
-- `src/main/java/com/thinkcode/transportbackend/service`
-- `src/main/java/com/thinkcode/transportbackend/security`
-- `src/main/java/com/thinkcode/transportbackend/config`
-- `src/test/java/com/thinkcode/transportbackend`
+### Messagerie
 
-## Règle métier déjà implémentée
+- `GET /api/messages/contacts`
+- `GET /api/messages`
+- `POST /api/messages`
 
-Lorsqu'une recette journalière active est inférieure à l'objectif journalier du véhicule, une dette est générée automatiquement.
+### Notifications
 
-## Suites recommandées
+- `GET /api/notifications`
+- `PATCH /api/notifications/read-all`
+- `GET /api/notifications/unread-count`
 
-- ajouter la facturation PDF
-- brancher PostgreSQL
-- ajouter le chat interne et les notifications
-- renforcer l'audit et le versionning documentaire
+### Facturation
+
+- `GET /api/invoices/pdf`
+- `POST /api/invoices/email`
+- `POST /api/invoices/message`
+
+### Portail client
+
+- `GET /api/clients/portal/overview`
+- `GET /api/clients/portal/vehicles`
+- `GET /api/clients/portal/monthly-report`
+
+## Notes
+
+- Le role `CLIENT` est supporte pour messagerie et notifications.
+- Le chauffeur ne cree pas de recette.
+- Le front attend encore une vraie execution Java locale pour valider le tout en integration.
+
+Details supplementaires dans [BACKEND_BOOTSTRAP.md](C:/Users/Serigne%20Mbaye%20Sy/Downloads/gest_backend/BACKEND_BOOTSTRAP.md).

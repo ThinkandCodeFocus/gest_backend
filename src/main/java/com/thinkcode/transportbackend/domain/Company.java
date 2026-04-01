@@ -1,4 +1,4 @@
-package com.thinkcode.transportbackend.entity;
+package com.thinkcode.transportbackend.domain;
 
 import com.thinkcode.transportbackend.common.BaseEntity;
 import jakarta.persistence.Column;

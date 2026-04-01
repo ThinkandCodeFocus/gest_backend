@@ -9,10 +9,13 @@ import com.thinkcode.transportbackend.entity.Debt;
 import com.thinkcode.transportbackend.entity.FinancialEntry;
 import com.thinkcode.transportbackend.entity.FinancialEntryType;
 import com.thinkcode.transportbackend.entity.MaintenanceRecord;
+import com.thinkcode.transportbackend.repository.DriverIncidentRepository;
+import com.thinkcode.transportbackend.repository.DriverRepository;
 import com.thinkcode.transportbackend.repository.DailyRevenueRepository;
 import com.thinkcode.transportbackend.repository.DebtRepository;
 import com.thinkcode.transportbackend.repository.FinancialEntryRepository;
 import com.thinkcode.transportbackend.repository.MaintenanceRecordRepository;
+import com.thinkcode.transportbackend.repository.VehicleRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -41,6 +44,18 @@ class ReportingServiceTest {
     @Mock
     private AuthenticatedCompanyProvider authenticatedCompanyProvider;
 
+    @Mock
+    private VehicleRepository vehicleRepository;
+
+    @Mock
+    private DriverRepository driverRepository;
+
+    @Mock
+    private DriverIncidentRepository driverIncidentRepository;
+
+    @Mock
+    private DebtService debtService;
+
     private ReportingService reportingService;
 
     @BeforeEach
@@ -50,7 +65,11 @@ class ReportingServiceTest {
                 debtRepository,
                 maintenanceRecordRepository,
                 financialEntryRepository,
-                authenticatedCompanyProvider
+                authenticatedCompanyProvider,
+                vehicleRepository,
+                driverRepository,
+                driverIncidentRepository,
+                debtService
         );
     }
 
@@ -86,6 +105,8 @@ class ReportingServiceTest {
                 .thenReturn(List.of(maintenance));
         when(financialEntryRepository.findAllByCompanyIdAndEntryDateBetweenOrderByEntryDateAsc(companyId, startDate, endDate))
                 .thenReturn(List.of(income, expense));
+        when(vehicleRepository.findAllByCompanyId(companyId)).thenReturn(List.of());
+        when(driverRepository.findAllByCompanyId(companyId)).thenReturn(List.of());
 
         ReportingOverviewResponse result = reportingService.overview(startDate, endDate);
 

@@ -8,6 +8,8 @@ import com.thinkcode.transportbackend.dto.DebtPaymentRequest;
 import com.thinkcode.transportbackend.entity.Debt;
 import com.thinkcode.transportbackend.entity.DebtStatus;
 import com.thinkcode.transportbackend.repository.DebtRepository;
+import com.thinkcode.transportbackend.repository.DriverRepository;
+import com.thinkcode.transportbackend.repository.VehicleRepository;
 import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.UUID;
@@ -28,10 +30,10 @@ class DebtServiceOwnershipTest {
     private AuthenticatedCompanyProvider authenticatedCompanyProvider;
 
     @Mock
-    private VehicleService vehicleService;
+    private VehicleRepository vehicleRepository;
 
     @Mock
-    private DriverService driverService;
+    private DriverRepository driverRepository;
 
     @Mock
     private NotificationService notificationService;
@@ -43,9 +45,9 @@ class DebtServiceOwnershipTest {
         debtService = new DebtService(
                 debtRepository,
                 authenticatedCompanyProvider,
-                vehicleService,
-            driverService,
-            notificationService
+                vehicleRepository,
+                driverRepository,
+                notificationService
         );
     }
 

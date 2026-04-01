@@ -1,4 +1,4 @@
-package com.thinkcode.transportbackend.entity;
+package com.thinkcode.transportbackend.domain;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.thinkcode.transportbackend.common.BaseEntity;

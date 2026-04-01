@@ -1,6 +1,6 @@
 package com.thinkcode.transportbackend.controller;
 
-import com.thinkcode.transportbackend.entity.AuditLog;
+import com.thinkcode.transportbackend.dto.AuditLogResponse;
 import com.thinkcode.transportbackend.service.AuditLogService;
 import java.time.Instant;
 import java.util.List;
@@ -23,10 +23,10 @@ public class AuditController {
 
     @GetMapping("/logs")
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS_MANAGER')")
-    public List<AuditLog> findAll(
+    public List<AuditLogResponse> findAll(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to
     ) {
-        return auditLogService.findAll(from, to);
+        return auditLogService.findAllResponses(from, to);
     }
 }

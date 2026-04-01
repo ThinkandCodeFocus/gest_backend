@@ -1,4 +1,4 @@
-package com.thinkcode.transportbackend.entity;
+package com.thinkcode.transportbackend.domain;
 
 public enum RoleName {
     ADMIN,

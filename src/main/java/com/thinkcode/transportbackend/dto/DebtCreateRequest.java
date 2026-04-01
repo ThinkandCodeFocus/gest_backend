@@ -11,6 +11,8 @@ public record DebtCreateRequest(
         UUID driverId,
         @NotNull BigDecimal amount,
         @NotNull LocalDate debtDate,
-        @NotBlank String reason
+        @NotBlank String reason,
+        String beneficiary,
+        String typeDebt
 ) {
 }

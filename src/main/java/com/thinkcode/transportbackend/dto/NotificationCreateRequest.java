@@ -7,6 +7,7 @@ import jakarta.validation.constraints.NotNull;
 public record NotificationCreateRequest(
         @NotBlank String title,
         @NotBlank String message,
+        String link,
         @NotNull NotificationType type
 ) {
 }

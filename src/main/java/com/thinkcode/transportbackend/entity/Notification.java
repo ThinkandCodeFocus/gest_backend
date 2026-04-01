@@ -24,6 +24,8 @@ public class Notification extends BaseEntity {
     @Column(nullable = false, length = 2000)
     private String message;
 
+    private String link;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private NotificationType type = NotificationType.INFO;
@@ -53,6 +55,14 @@ public class Notification extends BaseEntity {
 
     public void setMessage(String message) {
         this.message = message;
+    }
+
+    public String getLink() {
+        return link;
+    }
+
+    public void setLink(String link) {
+        this.link = link;
     }
 
     public NotificationType getType() {

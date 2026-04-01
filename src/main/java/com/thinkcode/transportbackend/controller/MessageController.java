@@ -88,6 +88,12 @@ public class MessageController {
         return Map.of("unreadCount", messageService.getUnreadCount());
     }
 
+    @GetMapping("/recent")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS_MANAGER', 'ASSISTANT', 'DRIVER', 'CLIENT')")
+    public List<MessageResponse> getRecent(@RequestParam(defaultValue = "10") int limit) {
+        return messageService.getRecentMessages(limit).stream().map(this::mapToResponse).toList();
+    }
+
     /**
      * Delete a message
      */
@@ -103,8 +109,10 @@ public class MessageController {
                 message.getId(),
                 message.getSender().getFullName(),
                 message.getSender().getId(),
+                message.getSender().getRole(),
                 message.getRecipient().getFullName(),
                 message.getRecipient().getId(),
+                message.getRecipient().getRole(),
                 message.getContent(),
                 message.getIsRead(),
                 message.getAttachmentUrl(),

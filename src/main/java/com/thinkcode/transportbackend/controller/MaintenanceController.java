@@ -1,9 +1,10 @@
 package com.thinkcode.transportbackend.controller;
 
-import com.thinkcode.transportbackend.entity.MaintenanceRecord;
+import com.thinkcode.transportbackend.dto.MaintenanceFraudAlertResponse;
+import com.thinkcode.transportbackend.dto.MaintenanceRequest;
+import com.thinkcode.transportbackend.dto.MaintenanceResponse;
 import com.thinkcode.transportbackend.service.AuthenticatedCompanyProvider;
 import com.thinkcode.transportbackend.service.MaintenanceService;
-import com.thinkcode.transportbackend.dto.MaintenanceRequest;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
@@ -34,19 +35,25 @@ public class MaintenanceController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS_MANAGER', 'ASSISTANT')")
-    public List<MaintenanceRecord> findAll() {
+    public List<MaintenanceResponse> findAll() {
         return maintenanceService.findAll(authenticatedCompanyProvider.requireCompanyId());
+    }
+
+    @GetMapping("/alerts")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS_MANAGER', 'ASSISTANT')")
+    public List<MaintenanceFraudAlertResponse> alerts() {
+        return maintenanceService.getFraudAlerts();
     }
 
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS_MANAGER', 'ASSISTANT')")
-    public MaintenanceRecord create(@Valid @RequestBody MaintenanceRequest request) {
+    public MaintenanceResponse create(@Valid @RequestBody MaintenanceRequest request) {
         return maintenanceService.create(request);
     }
 
     @PutMapping("/{maintenanceId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS_MANAGER', 'ASSISTANT')")
-    public MaintenanceRecord update(@PathVariable UUID maintenanceId, @Valid @RequestBody MaintenanceRequest request) {
+    public MaintenanceResponse update(@PathVariable UUID maintenanceId, @Valid @RequestBody MaintenanceRequest request) {
         return maintenanceService.update(maintenanceId, request);
     }
 

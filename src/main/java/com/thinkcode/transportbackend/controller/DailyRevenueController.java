@@ -1,9 +1,10 @@
 package com.thinkcode.transportbackend.controller;
 
+import com.thinkcode.transportbackend.dto.DailyRevenueRequest;
+import com.thinkcode.transportbackend.dto.DailyRevenueResponse;
 import com.thinkcode.transportbackend.entity.DailyRevenue;
 import com.thinkcode.transportbackend.service.AuthenticatedCompanyProvider;
 import com.thinkcode.transportbackend.service.DailyRevenueService;
-import com.thinkcode.transportbackend.dto.DailyRevenueRequest;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
@@ -34,20 +35,22 @@ public class DailyRevenueController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS_MANAGER', 'ASSISTANT')")
-    public List<DailyRevenue> findAll() {
-        return dailyRevenueService.findAll(authenticatedCompanyProvider.requireCompanyId());
+    public List<DailyRevenueResponse> findAll() {
+        return dailyRevenueService.findAllResponses(authenticatedCompanyProvider.requireCompanyId());
     }
 
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS_MANAGER', 'ASSISTANT')")
-    public DailyRevenue create(@Valid @RequestBody DailyRevenueRequest request) {
-        return dailyRevenueService.create(request);
+    public DailyRevenueResponse create(@Valid @RequestBody DailyRevenueRequest request) {
+        DailyRevenue created = dailyRevenueService.create(request);
+        return dailyRevenueService.toResponse(created);
     }
 
     @PutMapping("/{revenueId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS_MANAGER', 'ASSISTANT')")
-    public DailyRevenue update(@PathVariable UUID revenueId, @Valid @RequestBody DailyRevenueRequest request) {
-        return dailyRevenueService.update(revenueId, request);
+    public DailyRevenueResponse update(@PathVariable UUID revenueId, @Valid @RequestBody DailyRevenueRequest request) {
+        DailyRevenue updated = dailyRevenueService.update(revenueId, request);
+        return dailyRevenueService.toResponse(updated);
     }
 
     @DeleteMapping("/{revenueId}")

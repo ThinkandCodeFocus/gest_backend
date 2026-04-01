@@ -29,6 +29,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @RestController
 @RequestMapping("/chat")
+@Deprecated(since = "frontend-messaging-switch")
 public class ChatController {
 
     private final ChatService chatService;

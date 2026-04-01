@@ -1,6 +1,8 @@
 /target/
 /.idea/
 /.vscode/
+.env
+.env.*
 *.iml
 *.log
 /.mvn/wrapper/maven-wrapper.jar

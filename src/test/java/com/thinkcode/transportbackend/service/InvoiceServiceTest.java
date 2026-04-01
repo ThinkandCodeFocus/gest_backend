@@ -4,8 +4,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
 import com.thinkcode.transportbackend.entity.Client;
+import com.thinkcode.transportbackend.repository.ClientRepository;
 import com.thinkcode.transportbackend.repository.DailyRevenueRepository;
 import com.thinkcode.transportbackend.repository.DebtRepository;
+import com.thinkcode.transportbackend.repository.MaintenanceRecordRepository;
+import com.thinkcode.transportbackend.repository.MessageRepository;
+import com.thinkcode.transportbackend.repository.UserAccountRepository;
+import com.thinkcode.transportbackend.repository.VehicleRepository;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -26,13 +31,31 @@ class InvoiceServiceTest {
     private DebtRepository debtRepository;
 
     @Mock
+    private MaintenanceRecordRepository maintenanceRecordRepository;
+
+    @Mock
     private ClientService clientService;
+
+    @Mock
+    private ClientRepository clientRepository;
 
     @Mock
     private AuthenticatedCompanyProvider authenticatedCompanyProvider;
 
     @Mock
     private JavaMailSender mailSender;
+
+    @Mock
+    private AuthenticatedUserProvider authenticatedUserProvider;
+
+    @Mock
+    private MessageRepository messageRepository;
+
+    @Mock
+    private UserAccountRepository userAccountRepository;
+
+    @Mock
+    private VehicleRepository vehicleRepository;
 
     private InvoiceService invoiceService;
 
@@ -41,10 +64,16 @@ class InvoiceServiceTest {
         invoiceService = new InvoiceService(
                 dailyRevenueRepository,
                 debtRepository,
+                maintenanceRecordRepository,
                 clientService,
+                clientRepository,
                 authenticatedCompanyProvider,
-            mailSender,
-            "no-reply@test.local"
+                mailSender,
+                authenticatedUserProvider,
+                messageRepository,
+                userAccountRepository,
+                vehicleRepository,
+                "no-reply@test.local"
         );
     }
 

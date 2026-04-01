@@ -1,5 +1,6 @@
 package com.thinkcode.transportbackend.controller;
 
+import com.thinkcode.transportbackend.dto.ClientResponse;
 import com.thinkcode.transportbackend.entity.Client;
 import com.thinkcode.transportbackend.service.AuthenticatedCompanyProvider;
 import com.thinkcode.transportbackend.service.ClientService;
@@ -31,20 +32,20 @@ public class ClientController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS_MANAGER', 'ASSISTANT')")
-    public List<Client> findAll() {
-        return clientService.findAll(authenticatedCompanyProvider.requireCompanyId());
+    public List<ClientResponse> findAll() {
+        return clientService.findAllResponses(authenticatedCompanyProvider.requireCompanyId());
     }
 
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS_MANAGER', 'ASSISTANT')")
-    public Client create(@Valid @RequestBody ClientRequest request) {
-        return clientService.create(request);
+    public ClientResponse create(@Valid @RequestBody ClientRequest request) {
+        return clientService.createResponse(request);
     }
 
     @PutMapping("/{clientId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS_MANAGER', 'ASSISTANT')")
-    public Client update(@PathVariable UUID clientId, @Valid @RequestBody ClientRequest request) {
-        return clientService.update(clientId, request);
+    public ClientResponse update(@PathVariable UUID clientId, @Valid @RequestBody ClientRequest request) {
+        return clientService.updateResponse(clientId, request);
     }
 
     @DeleteMapping("/{clientId}")

@@ -5,6 +5,7 @@ import com.thinkcode.transportbackend.entity.DailyRevenue;
 import com.thinkcode.transportbackend.entity.Vehicle;
 import com.thinkcode.transportbackend.repository.DailyRevenueRepository;
 import com.thinkcode.transportbackend.dto.DailyRevenueRequest;
+import com.thinkcode.transportbackend.dto.DailyRevenueResponse;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
@@ -37,6 +38,13 @@ public class DailyRevenueService {
         return dailyRevenueRepository.findAllByVehicleCompanyId(companyId);
     }
 
+    public List<DailyRevenueResponse> findAllResponses(UUID companyId) {
+        return findAll(companyId).stream()
+                .sorted((left, right) -> right.getRevenueDate().compareTo(left.getRevenueDate()))
+                .map(this::toResponse)
+                .toList();
+    }
+
     public DailyRevenue findByIdForCompany(UUID revenueId, UUID companyId) {
         return dailyRevenueRepository.findByIdAndVehicleCompanyId(revenueId, companyId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Daily revenue not found"));
@@ -61,13 +69,25 @@ public class DailyRevenueService {
         revenue.setNote(request.note());
 
         if (request.activityStatus() == ActivityStatus.ACTIVE) {
-            BigDecimal driverShare = request.amount().multiply(new BigDecimal("0.30")).setScale(2, RoundingMode.HALF_UP);
-            BigDecimal companyShare = request.amount().subtract(driverShare);
+            BigDecimal driverShare = defaultShare(
+                    request.driverShare(),
+                    request.amount().multiply(new BigDecimal("0.30")).setScale(2, RoundingMode.HALF_UP)
+            );
+            BigDecimal companyShare = defaultShare(
+                    request.companyShare(),
+                    request.amount().subtract(driverShare)
+            );
+            BigDecimal clientShare = defaultShare(
+                    request.clientShare(),
+                    request.amount().subtract(driverShare).subtract(companyShare).max(BigDecimal.ZERO)
+            );
             revenue.setDriverShare(driverShare);
             revenue.setCompanyShare(companyShare);
+            revenue.setClientShare(clientShare);
 
-            BigDecimal shortfall = vehicle.getDailyTarget().subtract(request.amount());
+            BigDecimal shortfall = defaultShare(request.generatedDebt(), vehicle.getDailyTarget().subtract(request.amount()));
             if (shortfall.compareTo(BigDecimal.ZERO) > 0) {
+                revenue.setGeneratedDebt(shortfall);
                 debtService.createAutomaticDebt(
                         vehicle,
                         vehicle.getDriver(),
@@ -75,10 +95,14 @@ public class DailyRevenueService {
                         request.revenueDate(),
                         "Objectif journalier non atteint le " + request.revenueDate()
                 );
+            } else {
+                revenue.setGeneratedDebt(BigDecimal.ZERO);
             }
         } else {
-            revenue.setDriverShare(BigDecimal.ZERO);
-            revenue.setCompanyShare(request.amount());
+            revenue.setDriverShare(defaultShare(request.driverShare(), BigDecimal.ZERO));
+            revenue.setCompanyShare(defaultShare(request.companyShare(), BigDecimal.ZERO));
+            revenue.setClientShare(defaultShare(request.clientShare(), BigDecimal.ZERO));
+            revenue.setGeneratedDebt(defaultShare(request.generatedDebt(), BigDecimal.ZERO));
         }
 
         return dailyRevenueRepository.save(revenue);
@@ -105,13 +129,28 @@ public class DailyRevenueService {
         revenue.setNote(request.note());
 
         if (request.activityStatus() == ActivityStatus.ACTIVE) {
-            BigDecimal driverShare = request.amount().multiply(new BigDecimal("0.30")).setScale(2, RoundingMode.HALF_UP);
-            BigDecimal companyShare = request.amount().subtract(driverShare);
+            BigDecimal driverShare = defaultShare(
+                    request.driverShare(),
+                    request.amount().multiply(new BigDecimal("0.30")).setScale(2, RoundingMode.HALF_UP)
+            );
+            BigDecimal companyShare = defaultShare(
+                    request.companyShare(),
+                    request.amount().subtract(driverShare)
+            );
+            BigDecimal clientShare = defaultShare(
+                    request.clientShare(),
+                    request.amount().subtract(driverShare).subtract(companyShare).max(BigDecimal.ZERO)
+            );
             revenue.setDriverShare(driverShare);
             revenue.setCompanyShare(companyShare);
+            revenue.setClientShare(clientShare);
+            BigDecimal shortfall = defaultShare(request.generatedDebt(), vehicle.getDailyTarget().subtract(request.amount()));
+            revenue.setGeneratedDebt(shortfall.compareTo(BigDecimal.ZERO) > 0 ? shortfall : BigDecimal.ZERO);
         } else {
-            revenue.setDriverShare(BigDecimal.ZERO);
-            revenue.setCompanyShare(request.amount());
+            revenue.setDriverShare(defaultShare(request.driverShare(), BigDecimal.ZERO));
+            revenue.setCompanyShare(defaultShare(request.companyShare(), BigDecimal.ZERO));
+            revenue.setClientShare(defaultShare(request.clientShare(), BigDecimal.ZERO));
+            revenue.setGeneratedDebt(defaultShare(request.generatedDebt(), BigDecimal.ZERO));
         }
 
         return dailyRevenueRepository.save(revenue);
@@ -121,6 +160,30 @@ public class DailyRevenueService {
         UUID authenticatedCompanyId = authenticatedCompanyProvider.requireCompanyId();
         DailyRevenue revenue = findByIdForCompany(revenueId, authenticatedCompanyId);
         dailyRevenueRepository.delete(revenue);
+    }
+
+    public DailyRevenueResponse toResponse(DailyRevenue revenue) {
+        return new DailyRevenueResponse(
+                revenue.getId(),
+                revenue.getRevenueDate(),
+                revenue.getAmount(),
+                revenue.getActivityStatus() == null ? null : revenue.getActivityStatus().name(),
+                revenue.getDriverShare(),
+                revenue.getCompanyShare(),
+                revenue.getClientShare(),
+                revenue.getGeneratedDebt(),
+                revenue.getNote(),
+                revenue.getVehicle() == null
+                        ? null
+                        : new DailyRevenueResponse.VehicleSummary(
+                                revenue.getVehicle().getId(),
+                                revenue.getVehicle().getMatricule()
+                        )
+        );
+    }
+
+    private BigDecimal defaultShare(BigDecimal explicitValue, BigDecimal fallback) {
+        return explicitValue == null ? fallback : explicitValue.max(BigDecimal.ZERO);
     }
 }
 

@@ -1,5 +1,6 @@
 package com.thinkcode.transportbackend.service;
 
+import com.thinkcode.transportbackend.dto.AuditLogResponse;
 import com.thinkcode.transportbackend.entity.AuditLog;
 import com.thinkcode.transportbackend.repository.AuditLogRepository;
 import java.time.Instant;
@@ -48,5 +49,24 @@ public class AuditLogService {
             return auditLogRepository.findAllByCompanyIdAndCreatedAtBetweenOrderByCreatedAtDesc(companyId, from, to);
         }
         return auditLogRepository.findAllByCompanyIdOrderByCreatedAtDesc(companyId);
+    }
+
+    public List<AuditLogResponse> findAllResponses(Instant from, Instant to) {
+        return findAll(from, to).stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    private AuditLogResponse toResponse(AuditLog log) {
+        return new AuditLogResponse(
+                log.getId(),
+                log.getCreatedAt(),
+                log.getActorEmail(),
+                log.getAction(),
+                log.getModule(),
+                log.getEntityId(),
+                log.getBeforeData(),
+                log.getAfterData()
+        );
     }
 }
