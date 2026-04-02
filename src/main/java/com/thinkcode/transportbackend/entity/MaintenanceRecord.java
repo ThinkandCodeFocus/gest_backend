@@ -55,6 +55,13 @@ public class MaintenanceRecord extends BaseEntity {
     @Column(length = 6000)
     private String pieceLinesJson;
 
+    @Column(nullable = false)
+    private String validationStatus = "En attente";
+
+    private String createdBy;
+
+    private String validatedBy;
+
     public Vehicle getVehicle() {
         return vehicle;
     }
@@ -158,5 +165,28 @@ public class MaintenanceRecord extends BaseEntity {
     public void setPieceLinesJson(String pieceLinesJson) {
         this.pieceLinesJson = pieceLinesJson;
     }
-}
 
+    public String getValidationStatus() {
+        return validationStatus;
+    }
+
+    public void setValidationStatus(String validationStatus) {
+        this.validationStatus = validationStatus;
+    }
+
+    public String getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(String createdBy) {
+        this.createdBy = createdBy;
+    }
+
+    public String getValidatedBy() {
+        return validatedBy;
+    }
+
+    public void setValidatedBy(String validatedBy) {
+        this.validatedBy = validatedBy;
+    }
+}

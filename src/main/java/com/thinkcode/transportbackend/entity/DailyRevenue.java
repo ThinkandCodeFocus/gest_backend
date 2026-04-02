@@ -42,7 +42,17 @@ public class DailyRevenue extends BaseEntity {
     @Column(nullable = false)
     private BigDecimal generatedDebt = BigDecimal.ZERO;
 
+    private String observation;
+
     private String note;
+
+    public String getObservation() {
+        return observation;
+    }
+
+    public void setObservation(String observation) {
+        this.observation = observation;
+    }
 
     public Vehicle getVehicle() {
         return vehicle;

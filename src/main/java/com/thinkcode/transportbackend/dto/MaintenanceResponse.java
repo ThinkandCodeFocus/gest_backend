@@ -21,6 +21,9 @@ public record MaintenanceResponse(
         String prestataire,
         String lienPDF,
         boolean suspectedDuplicate,
-        String fraudReason
+        String fraudReason,
+        String validationStatus,
+        String createdBy,
+        String validatedBy
 ) {
 }

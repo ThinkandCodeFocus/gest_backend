@@ -2,10 +2,9 @@ package com.thinkcode.transportbackend.service;
 
 import com.thinkcode.transportbackend.entity.SystemSetting;
 import com.thinkcode.transportbackend.repository.SystemSettingRepository;
-import org.springframework.stereotype.Service;
-
 import java.util.List;
 import java.util.UUID;
+import org.springframework.stereotype.Service;
 
 @Service
 public class SystemSettingService {
@@ -26,6 +25,12 @@ public class SystemSettingService {
     }
 
     public SystemSetting save(SystemSetting setting) {
+        SystemSetting existing = systemSettingRepository.findBySettingKey(setting.getSettingKey()).orElse(null);
+        if (existing != null) {
+            existing.setSettingValue(setting.getSettingValue());
+            existing.setDescription(setting.getDescription());
+            return systemSettingRepository.save(existing);
+        }
         return systemSettingRepository.save(setting);
     }
 

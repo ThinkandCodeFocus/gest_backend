@@ -12,7 +12,15 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.data.domain.Page;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/messages")
@@ -24,9 +32,6 @@ public class MessageController {
         this.messageService = messageService;
     }
 
-    /**
-     * Get list of contacts (users in active conversations)
-     */
     @GetMapping("/contacts")
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS_MANAGER', 'ASSISTANT', 'DRIVER', 'CLIENT')")
     public List<Object> getContacts() {
@@ -35,14 +40,12 @@ public class MessageController {
                 .map(c -> Map.of(
                         "id", (Object) c.getId(),
                         "name", (Object) c.getFullName(),
-                        "email", (Object) c.getEmail()
+                        "email", (Object) c.getEmail(),
+                        "role", (Object) c.getRole().name()
                 ))
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Get conversation with a specific contact
-     */
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS_MANAGER', 'ASSISTANT', 'DRIVER', 'CLIENT')")
     public Page<MessageResponse> getConversation(
@@ -54,9 +57,6 @@ public class MessageController {
         return messages.map(this::mapToResponse);
     }
 
-    /**
-     * Send a message
-     */
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS_MANAGER', 'ASSISTANT', 'DRIVER', 'CLIENT')")
     public MessageResponse sendMessage(@Valid @RequestBody MessageRequest request) {
@@ -69,9 +69,6 @@ public class MessageController {
         return mapToResponse(message);
     }
 
-    /**
-     * Mark a message as read
-     */
     @PatchMapping("/{messageId}/read")
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS_MANAGER', 'ASSISTANT', 'DRIVER', 'CLIENT')")
     public MessageResponse markAsRead(@PathVariable UUID messageId) {
@@ -79,9 +76,6 @@ public class MessageController {
         return mapToResponse(message);
     }
 
-    /**
-     * Get count of unread messages
-     */
     @GetMapping("/unread-count")
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS_MANAGER', 'ASSISTANT', 'DRIVER', 'CLIENT')")
     public Map<String, Long> getUnreadCount() {
@@ -94,16 +88,12 @@ public class MessageController {
         return messageService.getRecentMessages(limit).stream().map(this::mapToResponse).toList();
     }
 
-    /**
-     * Delete a message
-     */
     @DeleteMapping("/{messageId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS_MANAGER', 'ASSISTANT', 'DRIVER', 'CLIENT')")
     public void deleteMessage(@PathVariable UUID messageId) {
         messageService.deleteMessage(messageId);
     }
 
-    // Helper method to convert Message to MessageResponse
     private MessageResponse mapToResponse(Message message) {
         return new MessageResponse(
                 message.getId(),

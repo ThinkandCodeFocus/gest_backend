@@ -46,6 +46,13 @@ public class Debt extends BaseEntity {
     @Column(nullable = false)
     private BigDecimal paidAmount = BigDecimal.ZERO;
 
+    @Column(nullable = false)
+    private String validationStatus = "En attente";
+
+    private String createdBy;
+
+    private String validatedBy;
+
     public Vehicle getVehicle() {
         return vehicle;
     }
@@ -117,5 +124,28 @@ public class Debt extends BaseEntity {
     public void setPaidAmount(BigDecimal paidAmount) {
         this.paidAmount = paidAmount;
     }
-}
 
+    public String getValidationStatus() {
+        return validationStatus;
+    }
+
+    public void setValidationStatus(String validationStatus) {
+        this.validationStatus = validationStatus;
+    }
+
+    public String getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(String createdBy) {
+        this.createdBy = createdBy;
+    }
+
+    public String getValidatedBy() {
+        return validatedBy;
+    }
+
+    public void setValidatedBy(String validatedBy) {
+        this.validatedBy = validatedBy;
+    }
+}

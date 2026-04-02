@@ -23,8 +23,6 @@ import com.thinkcode.transportbackend.repository.DriverRepository;
 import com.thinkcode.transportbackend.repository.UserAccountRepository;
 import com.thinkcode.transportbackend.repository.VehicleRepository;
 import java.math.BigDecimal;
-import java.time.Instant;
-import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.UUID;
@@ -48,6 +46,7 @@ public class DriverService {
     private final DebtService debtService;
     private final UserAccountRepository userAccountRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AuditLogService auditLogService;
 
     private static final String DEFAULT_COLLABORATOR_PASSWORD = "demo1234";
 
@@ -64,7 +63,8 @@ public class DriverService {
             NotificationService notificationService,
             DebtService debtService,
             UserAccountRepository userAccountRepository,
-            PasswordEncoder passwordEncoder
+            PasswordEncoder passwordEncoder,
+            AuditLogService auditLogService
     ) {
         this.driverRepository = driverRepository;
         this.companyResolver = companyResolver;
@@ -79,10 +79,13 @@ public class DriverService {
         this.debtService = debtService;
         this.userAccountRepository = userAccountRepository;
         this.passwordEncoder = passwordEncoder;
+        this.auditLogService = auditLogService;
     }
 
     public List<DriverResponse> findAll(UUID companyId) {
+        UserAccount currentUser = authenticatedUserProvider.requireUser();
         return driverRepository.findAllByCompanyId(companyId).stream()
+                .filter(driver -> canViewDriver(currentUser.getRole(), currentUser.getEmail(), driver))
                 .map(driver -> toResponse(driver, companyId))
                 .toList();
     }
@@ -107,22 +110,31 @@ public class DriverService {
 
     public Driver create(DriverRequest request) {
         UUID companyId = authenticatedCompanyProvider.requireCompanyId();
+        RoleName targetRole = request.role() == null ? RoleName.DRIVER : request.role();
+        assertAllowedManagedRole(targetRole);
+
         Driver driver = new Driver();
         applyRequest(driver, request, companyId);
         Driver saved = driverRepository.save(driver);
-        syncUserAccount(saved, null, companyId);
+        syncUserAccount(saved, null, companyId, request.password());
         assignVehicleIfRequested(saved, request.assignedVehicleId(), companyId);
+        auditLogService.log("CREATE", "DRIVER", saved.getId().toString(), null, saved.getFullName() + "|" + saved.getRole().name());
         return saved;
     }
 
     public Driver update(UUID driverId, DriverRequest request) {
         UUID companyId = authenticatedCompanyProvider.requireCompanyId();
         Driver driver = findByIdForCompany(driverId, companyId);
+        RoleName targetRole = request.role() == null ? RoleName.DRIVER : request.role();
+        assertAllowedManagedRole(targetRole);
+
+        String before = driver.getFullName() + "|" + driver.getRole().name() + "|" + driver.getEmail();
         String previousEmail = driver.getEmail();
         applyRequest(driver, request, companyId);
         Driver saved = driverRepository.save(driver);
-        syncUserAccount(saved, previousEmail, companyId);
+        syncUserAccount(saved, previousEmail, companyId, request.password());
         assignVehicleIfRequested(saved, request.assignedVehicleId(), companyId);
+        auditLogService.log("UPDATE", "DRIVER", saved.getId().toString(), before, saved.getFullName() + "|" + saved.getRole().name() + "|" + saved.getEmail());
         return saved;
     }
 
@@ -133,6 +145,7 @@ public class DriverService {
                 .filter(vehicle -> vehicle.getDriver() != null && vehicle.getDriver().getId().equals(driverId))
                 .forEach(vehicle -> vehicle.setDriver(null));
         driverRepository.delete(driver);
+        auditLogService.log("DELETE", "DRIVER", driver.getId().toString(), driver.getFullName() + "|" + driver.getRole().name(), null);
     }
 
     public DriverSelfOverviewResponse getSelfOverview() {
@@ -213,10 +226,38 @@ public class DriverService {
         driver.setEmail(request.email());
         driver.setPhoneNumber(request.phoneNumber());
         driver.setLicenseNumber(request.licenseNumber());
+        driver.setDocumentUrl(request.documentUrl());
         driver.setRole(request.role() == null ? RoleName.DRIVER : request.role());
         driver.setStatus(request.status());
         driver.setPerformanceScore(request.performanceScore() == null ? 0 : request.performanceScore());
         driver.setCompany(companyResolver.require(companyId));
+    }
+
+    private void assertAllowedManagedRole(RoleName targetRole) {
+        RoleName currentRole = authenticatedUserProvider.requireUser().getRole();
+        if (targetRole == RoleName.ADMIN || targetRole == RoleName.CLIENT) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "This role cannot be managed from the collaborator screen");
+        }
+        if ((targetRole == RoleName.ASSISTANT || targetRole == RoleName.OPERATIONS_MANAGER) && currentRole != RoleName.ADMIN) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Only direction can create or update assistant and operations manager profiles");
+        }
+        if (targetRole == RoleName.DRIVER && currentRole != RoleName.ADMIN && currentRole != RoleName.OPERATIONS_MANAGER && currentRole != RoleName.ASSISTANT) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "You are not allowed to manage driver profiles");
+        }
+    }
+
+    private boolean canViewDriver(RoleName currentRole, String currentEmail, Driver driver) {
+        if (currentRole == RoleName.ADMIN) {
+            return true;
+        }
+        if (currentRole == RoleName.OPERATIONS_MANAGER) {
+            return driver.getRole() == RoleName.DRIVER || driver.getRole() == RoleName.ASSISTANT;
+        }
+        if (currentRole == RoleName.ASSISTANT) {
+            return driver.getRole() == RoleName.DRIVER
+                    || (driver.getEmail() != null && driver.getEmail().equalsIgnoreCase(currentEmail));
+        }
+        return driver.getRole() == RoleName.DRIVER;
     }
 
     private void assignVehicleIfRequested(Driver driver, UUID vehicleId, UUID companyId) {
@@ -244,6 +285,7 @@ public class DriverService {
                 driver.getEmail(),
                 driver.getPhoneNumber(),
                 driver.getLicenseNumber(),
+                driver.getDocumentUrl(),
                 driver.getRole().name(),
                 driver.getStatus(),
                 driver.getPerformanceScore(),
@@ -288,7 +330,7 @@ public class DriverService {
                 .orElse(null);
     }
 
-    private void syncUserAccount(Driver driver, String previousEmail, UUID companyId) {
+    private void syncUserAccount(Driver driver, String previousEmail, UUID companyId, String rawPassword) {
         if (driver.getEmail() == null || driver.getEmail().isBlank()) {
             return;
         }
@@ -307,7 +349,9 @@ public class DriverService {
         if (account == null) {
             account = new UserAccount();
             account.setCompany(companyResolver.require(companyId));
-            account.setPasswordHash(passwordEncoder.encode(DEFAULT_COLLABORATOR_PASSWORD));
+            account.setPasswordHash(passwordEncoder.encode(rawPassword == null || rawPassword.isBlank() ? DEFAULT_COLLABORATOR_PASSWORD : rawPassword));
+        } else if (rawPassword != null && !rawPassword.isBlank()) {
+            account.setPasswordHash(passwordEncoder.encode(rawPassword));
         }
 
         UserAccount conflictingAccount = userAccountRepository.findByCompanyIdAndEmail(companyId, normalizedEmail).orElse(null);

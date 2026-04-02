@@ -13,6 +13,12 @@ public interface DailyRevenueRepository extends JpaRepository<DailyRevenue, UUID
 
     List<DailyRevenue> findAllByVehicleCompanyId(UUID companyId);
 
+    List<DailyRevenue> findAllByVehicleCompanyIdAndRevenueDateBetween(
+            UUID companyId,
+            LocalDate startDate,
+            LocalDate endDate
+    );
+
     List<DailyRevenue> findAllByVehicleCompanyIdAndVehicleClientIdAndRevenueDateBetween(
             UUID companyId,
             UUID clientId,
@@ -20,8 +26,8 @@ public interface DailyRevenueRepository extends JpaRepository<DailyRevenue, UUID
             LocalDate endDate
     );
 
-    List<DailyRevenue> findAllByVehicleCompanyIdAndRevenueDateBetween(
-            UUID companyId,
+    List<DailyRevenue> findAllByVehicleIdInAndRevenueDateBetween(
+            List<UUID> vehicleIds,
             LocalDate startDate,
             LocalDate endDate
     );

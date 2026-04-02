@@ -26,6 +26,8 @@ public interface DebtRepository extends JpaRepository<Debt, UUID> {
             LocalDate endDate
     );
 
+    List<Debt> findAllByVehicleIdInAndDebtDateBetween(List<UUID> vehicleIds, LocalDate startDate, LocalDate endDate);
+
     Optional<Debt> findByIdAndVehicleCompanyId(UUID id, UUID companyId);
 
     @Query("SELECT d FROM Debt d WHERE d.vehicle.company.id = :companyId " +

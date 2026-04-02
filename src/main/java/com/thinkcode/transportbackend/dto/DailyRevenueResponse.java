@@ -14,6 +14,7 @@ public record DailyRevenueResponse(
         BigDecimal clientShare,
         BigDecimal generatedDebt,
         String note,
+        String observation,
         VehicleSummary vehicle
 ) {
     public record VehicleSummary(

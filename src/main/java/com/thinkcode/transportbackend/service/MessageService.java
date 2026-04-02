@@ -1,16 +1,17 @@
 package com.thinkcode.transportbackend.service;
 
 import com.thinkcode.transportbackend.entity.Message;
+import com.thinkcode.transportbackend.entity.RoleName;
 import com.thinkcode.transportbackend.entity.UserAccount;
 import com.thinkcode.transportbackend.repository.MessageRepository;
 import com.thinkcode.transportbackend.repository.UserAccountRepository;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.stereotype.Service;
-
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
 
 @Service
 public class MessageService {
@@ -32,27 +33,25 @@ public class MessageService {
         this.authenticatedUserProvider = authenticatedUserProvider;
     }
 
-    /**
-     * Get list of contacts (users who have active conversations)
-     */
     public List<UserAccount> getContacts() {
         UUID companyId = authenticatedCompanyProvider.requireCompanyId();
         UserAccount user = authenticatedUserProvider.requireUser();
-        return userAccountRepository.findAllByCompanyIdAndIdNotOrderByFullNameAsc(companyId, user.getId());
+        return userAccountRepository.findAllByCompanyIdAndIdNotOrderByFullNameAsc(companyId, user.getId()).stream()
+                .filter(contact -> canInteract(user, contact))
+                .toList();
     }
 
-    /**
-     * Get conversation with a specific contact (paginated)
-     */
     public Page<Message> getConversation(UUID contactId, int page, int pageSize) {
         UUID companyId = authenticatedCompanyProvider.requireCompanyId();
         UserAccount user = authenticatedUserProvider.requireUser();
         UUID userId = user.getId();
-        
-        // Ensure contact exists and belongs to same company
+
         UserAccount contact = userAccountRepository.findById(contactId).orElse(null);
         if (contact == null || !contact.getCompany().getId().equals(companyId)) {
             throw new IllegalArgumentException("Contact not found or unauthorized");
+        }
+        if (!canInteract(user, contact)) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Unauthorized contact");
         }
 
         return messageRepository.findConversation(
@@ -63,13 +62,9 @@ public class MessageService {
         );
     }
 
-    /**
-     * Send a message to a recipient
-     */
     public Message sendMessage(UUID recipientId, String content, String attachmentUrl, String attachmentName) {
         UUID companyId = authenticatedCompanyProvider.requireCompanyId();
         UserAccount sender = authenticatedUserProvider.requireUser();
-        UUID userId = sender.getId();
 
         UserAccount recipient = userAccountRepository.findById(recipientId).orElse(null);
 
@@ -79,6 +74,9 @@ public class MessageService {
 
         if (!recipient.getCompany().getId().equals(companyId)) {
             throw new IllegalArgumentException("Recipient must belong to same company");
+        }
+        if (!canInteract(sender, recipient)) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Unauthorized recipient");
         }
 
         Message message = new Message();
@@ -93,13 +91,10 @@ public class MessageService {
         return messageRepository.save(message);
     }
 
-    /**
-     * Mark a message as read
-     */
     public Message markAsRead(UUID messageId) {
         UserAccount user = authenticatedUserProvider.requireUser();
         UUID recipientId = user.getId();
-        
+
         Message message = messageRepository.findById(messageId).orElse(null);
         if (message == null) {
             throw new IllegalArgumentException("Message not found");
@@ -114,9 +109,6 @@ public class MessageService {
         return messageRepository.save(message);
     }
 
-    /**
-     * Get count of unread messages
-     */
     public long getUnreadCount() {
         UUID companyId = authenticatedCompanyProvider.requireCompanyId();
         UserAccount user = authenticatedUserProvider.requireUser();
@@ -129,23 +121,26 @@ public class MessageService {
         return messageRepository.findRecentMessages(companyId, user.getId(), PageRequest.of(0, limit));
     }
 
-    /**
-     * Delete a message
-     */
     public void deleteMessage(UUID messageId) {
         UserAccount user = authenticatedUserProvider.requireUser();
         UUID userId = user.getId();
         Message message = messageRepository.findById(messageId).orElse(null);
-        
+
         if (message == null) {
             throw new IllegalArgumentException("Message not found");
         }
 
-        // Only sender or recipient can delete
         if (!message.getSender().getId().equals(userId) && !message.getRecipient().getId().equals(userId)) {
             throw new IllegalArgumentException("Unauthorized to delete this message");
         }
 
         messageRepository.delete(message);
+    }
+
+    private boolean canInteract(UserAccount currentUser, UserAccount contact) {
+        if (currentUser.getRole() != RoleName.CLIENT) {
+            return true;
+        }
+        return contact.getRole() != RoleName.CLIENT;
     }
 }

@@ -8,6 +8,8 @@ import com.thinkcode.transportbackend.dto.MaintenanceRequest;
 import com.thinkcode.transportbackend.dto.MaintenanceResponse;
 import com.thinkcode.transportbackend.entity.MaintenanceRecord;
 import com.thinkcode.transportbackend.entity.MaintenanceType;
+import com.thinkcode.transportbackend.entity.RoleName;
+import com.thinkcode.transportbackend.entity.UserAccount;
 import com.thinkcode.transportbackend.entity.Vehicle;
 import com.thinkcode.transportbackend.repository.MaintenanceRecordRepository;
 import java.math.BigDecimal;
@@ -27,17 +29,23 @@ public class MaintenanceService {
     private final MaintenanceRecordRepository maintenanceRecordRepository;
     private final VehicleService vehicleService;
     private final AuthenticatedCompanyProvider authenticatedCompanyProvider;
+    private final AuthenticatedUserProvider authenticatedUserProvider;
+    private final AuditLogService auditLogService;
     private final ObjectMapper objectMapper;
 
     public MaintenanceService(
             MaintenanceRecordRepository maintenanceRecordRepository,
             VehicleService vehicleService,
             AuthenticatedCompanyProvider authenticatedCompanyProvider,
+            AuthenticatedUserProvider authenticatedUserProvider,
+            AuditLogService auditLogService,
             ObjectMapper objectMapper
     ) {
         this.maintenanceRecordRepository = maintenanceRecordRepository;
         this.vehicleService = vehicleService;
         this.authenticatedCompanyProvider = authenticatedCompanyProvider;
+        this.authenticatedUserProvider = authenticatedUserProvider;
+        this.auditLogService = auditLogService;
         this.objectMapper = objectMapper;
     }
 
@@ -58,20 +66,42 @@ public class MaintenanceService {
         Vehicle vehicle = vehicleService.findByIdForCompany(request.vehicleId(), companyId);
         MaintenanceRecord record = new MaintenanceRecord();
         applyRequest(record, request, vehicle, companyId);
-        return toResponse(maintenanceRecordRepository.save(record));
+        markCreationWorkflow(record);
+        MaintenanceRecord saved = maintenanceRecordRepository.save(record);
+        auditLogService.log("CREATE", "MAINTENANCE", saved.getId().toString(), null, saved.getValidationStatus() + "|" + saved.getVehicle().getMatricule());
+        return toResponse(saved);
     }
 
     public MaintenanceResponse update(UUID maintenanceId, MaintenanceRequest request) {
         UUID companyId = authenticatedCompanyProvider.requireCompanyId();
         MaintenanceRecord record = findByIdForCompany(maintenanceId, companyId);
         Vehicle vehicle = vehicleService.findByIdForCompany(request.vehicleId(), companyId);
+        String before = record.getValidationStatus() + "|" + record.getDescription();
         applyRequest(record, request, vehicle, companyId);
-        return toResponse(maintenanceRecordRepository.save(record));
+        if (canValidate(authenticatedUserProvider.requireUser())) {
+            record.setValidationStatus("Validee");
+            record.setValidatedBy(authenticatedUserProvider.requireUser().getEmail());
+        } else {
+            record.setValidationStatus("En attente");
+            record.setValidatedBy(null);
+        }
+        MaintenanceRecord saved = maintenanceRecordRepository.save(record);
+        auditLogService.log("UPDATE", "MAINTENANCE", saved.getId().toString(), before, saved.getValidationStatus() + "|" + saved.getDescription());
+        return toResponse(saved);
+    }
+
+    public MaintenanceResponse approve(UUID maintenanceId) {
+        return updateValidation(maintenanceId, "Validee", "VALIDATE");
+    }
+
+    public MaintenanceResponse reject(UUID maintenanceId) {
+        return updateValidation(maintenanceId, "Rejetee", "REJECT");
     }
 
     public void delete(UUID maintenanceId) {
         UUID companyId = authenticatedCompanyProvider.requireCompanyId();
         MaintenanceRecord record = findByIdForCompany(maintenanceId, companyId);
+        auditLogService.log("DELETE", "MAINTENANCE", record.getId().toString(), record.getValidationStatus() + "|" + record.getDescription(), null);
         maintenanceRecordRepository.delete(record);
     }
 
@@ -82,6 +112,37 @@ public class MaintenanceService {
                 .filter(Objects::nonNull)
                 .sorted(Comparator.comparing(MaintenanceFraudAlertResponse::date).reversed())
                 .toList();
+    }
+
+    private MaintenanceResponse updateValidation(UUID maintenanceId, String nextStatus, String action) {
+        UUID companyId = authenticatedCompanyProvider.requireCompanyId();
+        UserAccount user = authenticatedUserProvider.requireUser();
+        if (!canValidate(user)) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Only direction or operations manager can validate this maintenance");
+        }
+        MaintenanceRecord record = findByIdForCompany(maintenanceId, companyId);
+        String before = record.getValidationStatus();
+        record.setValidationStatus(nextStatus);
+        record.setValidatedBy(user.getEmail());
+        MaintenanceRecord saved = maintenanceRecordRepository.save(record);
+        auditLogService.log(action, "MAINTENANCE", saved.getId().toString(), before, nextStatus + "|" + user.getEmail());
+        return toResponse(saved);
+    }
+
+    private void markCreationWorkflow(MaintenanceRecord record) {
+        UserAccount user = authenticatedUserProvider.requireUser();
+        record.setCreatedBy(user.getEmail());
+        if (canValidate(user)) {
+            record.setValidationStatus("Validee");
+            record.setValidatedBy(user.getEmail());
+        } else {
+            record.setValidationStatus("En attente");
+            record.setValidatedBy(null);
+        }
+    }
+
+    private boolean canValidate(UserAccount user) {
+        return user.getRole() == RoleName.ADMIN || user.getRole() == RoleName.OPERATIONS_MANAGER;
     }
 
     private void applyRequest(MaintenanceRecord record, MaintenanceRequest request, Vehicle vehicle, UUID companyId) {
@@ -208,7 +269,10 @@ public class MaintenanceService {
                 record.getProvider(),
                 record.getDocumentUrl(),
                 record.isSuspectedDuplicate(),
-                record.getFraudReason()
+                record.getFraudReason(),
+                record.getValidationStatus(),
+                record.getCreatedBy(),
+                record.getValidatedBy()
         );
     }
 

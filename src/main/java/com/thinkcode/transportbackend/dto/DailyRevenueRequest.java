@@ -15,7 +15,8 @@ public record DailyRevenueRequest(
         BigDecimal companyShare,
         BigDecimal clientShare,
         BigDecimal generatedDebt,
-        String note
+        String note,
+        String observation
 ) {
 }
 

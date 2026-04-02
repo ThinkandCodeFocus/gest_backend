@@ -3,7 +3,12 @@ package com.thinkcode.transportbackend.controller;
 import com.thinkcode.transportbackend.dto.InvoiceEmailRequest;
 import com.thinkcode.transportbackend.dto.InvoiceMessageRequest;
 import com.thinkcode.transportbackend.dto.InvoiceSummaryResponse;
+import com.thinkcode.transportbackend.dto.DailyRevenueResponse;
+import com.thinkcode.transportbackend.dto.ClientAccountSummary;
+import com.thinkcode.transportbackend.entity.DailyRevenue;
 import com.thinkcode.transportbackend.service.InvoiceService;
+import com.thinkcode.transportbackend.service.AuthenticatedCompanyProvider;
+import com.thinkcode.transportbackend.service.DailyRevenueService;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
 import java.util.List;
@@ -16,6 +21,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -34,17 +40,26 @@ public class InvoiceController {
 
     @GetMapping("/summary")
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS_MANAGER', 'ASSISTANT', 'CLIENT')")
-    public List<InvoiceSummaryResponse> summary(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
+    public List<InvoiceSummaryResponse> getInvoiceSummaries(
+            @RequestParam LocalDate startDate,
+            @RequestParam LocalDate endDate
     ) {
         return invoiceService.getInvoiceSummaries(startDate, endDate);
     }
 
-    @GetMapping("/pdf")
+    @GetMapping("/client-account-summary")
+    @PreAuthorize("hasRole('CLIENT')")
+    public ClientAccountSummary getClientAccountSummary(
+            @RequestParam LocalDate startDate,
+            @RequestParam LocalDate endDate
+    ) {
+        return invoiceService.getClientAccountSummary(startDate, endDate);
+    }
+
+    @GetMapping("/pdf/{clientId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS_MANAGER', 'ASSISTANT')")
-    public ResponseEntity<byte[]> downloadPdf(
-            @RequestParam UUID clientId,
+    public ResponseEntity<byte[]> generateInvoicePdf(
+            @PathVariable UUID clientId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
     ) {

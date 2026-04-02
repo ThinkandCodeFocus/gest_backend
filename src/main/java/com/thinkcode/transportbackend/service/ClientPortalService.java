@@ -3,6 +3,7 @@ package com.thinkcode.transportbackend.service;
 import com.thinkcode.transportbackend.dto.ClientPortalMonthlyReportResponse;
 import com.thinkcode.transportbackend.dto.ClientPortalOverviewResponse;
 import com.thinkcode.transportbackend.dto.ClientPortalVehicleResponse;
+import com.thinkcode.transportbackend.dto.MaintenanceResponse;
 import com.thinkcode.transportbackend.entity.Client;
 import com.thinkcode.transportbackend.entity.DailyRevenue;
 import com.thinkcode.transportbackend.entity.Debt;
@@ -21,6 +22,7 @@ import java.time.YearMonth;
 import java.time.format.TextStyle;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -113,6 +115,42 @@ public class ClientPortalService {
                 .toList();
     }
 
+    public List<MaintenanceResponse> getMaintenances(String month, UUID vehicleId, MaintenanceType type, LocalDate date) {
+        UUID companyId = authenticatedCompanyProvider.requireCompanyId();
+        Client client = requireAuthenticatedClient(companyId);
+
+        List<Vehicle> clientVehicles = vehicleRepository.findByCompanyIdAndClientId(companyId, client.getId());
+        if (vehicleId != null) {
+            clientVehicles = clientVehicles.stream()
+                    .filter(vehicle -> vehicle.getId().equals(vehicleId))
+                    .toList();
+            if (clientVehicles.isEmpty()) {
+                throw new ApiException(HttpStatus.FORBIDDEN, "Vehicle not found or unauthorized");
+            }
+        }
+
+        if (clientVehicles.isEmpty()) {
+            return List.of();
+        }
+
+        LocalDate start;
+        LocalDate end;
+        if (date != null) {
+            start = date;
+            end = date;
+        } else {
+            YearMonth yearMonth = month == null || month.isBlank() ? YearMonth.now() : YearMonth.parse(month);
+            start = yearMonth.atDay(1);
+            end = yearMonth.atEndOfMonth();
+        }
+
+        return maintenanceRecordRepository.findAllByVehicleInAndMaintenanceDateBetween(clientVehicles, start, end).stream()
+                .filter(record -> type == null || record.getType() == type)
+                .sorted(Comparator.comparing(MaintenanceRecord::getMaintenanceDate).reversed())
+                .map(this::mapMaintenanceResponse)
+                .toList();
+    }
+
     public ClientPortalMonthlyReportResponse getMonthlyReport(UUID vehicleId, String month) {
         UUID companyId = authenticatedCompanyProvider.requireCompanyId();
         Client client = requireAuthenticatedClient(companyId);
@@ -138,9 +176,9 @@ public class ClientPortalService {
 
         List<ClientPortalMonthlyReportResponse.DailyVehicleRow> days = new ArrayList<>();
         for (int day = 1; day <= yearMonth.lengthOfMonth(); day++) {
-            LocalDate date = yearMonth.atDay(day);
-            DailyRevenue revenue = revenueByDate.get(date);
-            List<MaintenanceRecord> dayMaintenances = maintenancesByDate.getOrDefault(date, List.of());
+            LocalDate currentDate = yearMonth.atDay(day);
+            DailyRevenue revenue = revenueByDate.get(currentDate);
+            List<MaintenanceRecord> dayMaintenances = maintenancesByDate.getOrDefault(currentDate, List.of());
 
             BigDecimal recetteCaisse = revenue == null ? BigDecimal.ZERO : nullSafe(revenue.getAmount());
             BigDecimal recetteChauffeur = revenue == null ? BigDecimal.ZERO : nullSafe(revenue.getDriverShare());
@@ -168,8 +206,8 @@ public class ClientPortalService {
                     .collect(Collectors.joining(", "));
 
             days.add(new ClientPortalMonthlyReportResponse.DailyVehicleRow(
-                    date.toString(),
-                    formatFrenchDayLabel(date),
+                    currentDate.toString(),
+                    formatFrenchDayLabel(currentDate),
                     recetteCaisse,
                     recetteChauffeur,
                     recetteService,
@@ -271,6 +309,29 @@ public class ClientPortalService {
         );
     }
 
+    private MaintenanceResponse mapMaintenanceResponse(MaintenanceRecord record) {
+        return new MaintenanceResponse(
+                record.getId(),
+                record.getMaintenanceDate(),
+                record.getVehicle().getId(),
+                record.getVehicle().getMatricule(),
+                record.getType(),
+                record.getDescription(),
+                record.getPieceCount(),
+                List.of(),
+                nullSafe(record.getPartsCost()),
+                nullSafe(record.getLaborCost()),
+                nullSafe(record.getCost()),
+                record.getProvider(),
+                record.getDocumentUrl(),
+                record.isSuspectedDuplicate(),
+                record.getFraudReason(),
+                record.getValidationStatus(),
+                record.getCreatedBy(),
+                record.getValidatedBy()
+        );
+    }
+
     private BigDecimal sumRows(
             List<ClientPortalMonthlyReportResponse.DailyVehicleRow> rows,
             java.util.function.Function<ClientPortalMonthlyReportResponse.DailyVehicleRow, BigDecimal> extractor
@@ -318,3 +379,4 @@ public class ClientPortalService {
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Client not found"));
     }
 }
+

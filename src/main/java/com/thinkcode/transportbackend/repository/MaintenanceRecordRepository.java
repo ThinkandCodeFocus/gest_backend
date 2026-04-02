@@ -1,6 +1,7 @@
 package com.thinkcode.transportbackend.repository;
 
 import com.thinkcode.transportbackend.entity.MaintenanceRecord;
+import com.thinkcode.transportbackend.entity.Vehicle;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -15,6 +16,12 @@ public interface MaintenanceRecordRepository extends JpaRepository<MaintenanceRe
 
     List<MaintenanceRecord> findAllByVehicleCompanyIdAndMaintenanceDateBetween(
             UUID companyId,
+            LocalDate startDate,
+            LocalDate endDate
+    );
+
+    List<MaintenanceRecord> findAllByVehicleInAndMaintenanceDateBetween(
+            List<Vehicle> vehicles,
             LocalDate startDate,
             LocalDate endDate
     );

@@ -36,7 +36,13 @@ class DebtServiceOwnershipTest {
     private DriverRepository driverRepository;
 
     @Mock
+    private AuthenticatedUserProvider authenticatedUserProvider;
+
+    @Mock
     private NotificationService notificationService;
+
+    @Mock
+    private AuditLogService auditLogService;
 
     private DebtService debtService;
 
@@ -45,9 +51,11 @@ class DebtServiceOwnershipTest {
         debtService = new DebtService(
                 debtRepository,
                 authenticatedCompanyProvider,
+                authenticatedUserProvider,
                 vehicleRepository,
                 driverRepository,
-                notificationService
+                notificationService,
+                auditLogService
         );
     }
 

@@ -16,6 +16,7 @@ import com.thinkcode.transportbackend.entity.Message;
 import com.thinkcode.transportbackend.entity.RoleName;
 import com.thinkcode.transportbackend.entity.UserAccount;
 import com.thinkcode.transportbackend.entity.Vehicle;
+import com.thinkcode.transportbackend.dto.ClientAccountSummary;
 import com.thinkcode.transportbackend.dto.InvoiceSummaryResponse;
 import com.thinkcode.transportbackend.repository.ClientRepository;
 import com.thinkcode.transportbackend.repository.DailyRevenueRepository;
@@ -26,9 +27,12 @@ import com.thinkcode.transportbackend.repository.UserAccountRepository;
 import com.thinkcode.transportbackend.repository.VehicleRepository;
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -94,6 +98,78 @@ public class InvoiceService {
                 .toList();
     }
 
+    public ClientAccountSummary getClientAccountSummary(LocalDate startDate, LocalDate endDate) {
+        UUID companyId = authenticatedCompanyProvider.requireCompanyId();
+        UserAccount currentUser = authenticatedUserProvider.requireUser();
+        Client client = clientRepository.findByCompanyIdAndEmail(companyId, currentUser.getEmail())
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Client not found"));
+
+        List<Vehicle> clientVehicles = vehicleRepository.findAllByCompanyIdAndClientId(companyId, client.getId());
+        List<UUID> clientVehicleIds = clientVehicles.stream().map(Vehicle::getId).collect(Collectors.toList());
+
+        long workingDays = startDate.datesUntil(endDate.plusDays(1))
+                .filter(d -> d.getDayOfWeek() != DayOfWeek.SUNDAY)
+                .count();
+
+        BigDecimal expectedRevenue = clientVehicles.stream()
+                .map(v -> v.getDailyTarget().multiply(new BigDecimal(workingDays)))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        List<DailyRevenue> revenues = dailyRevenueRepository.findAllByVehicleIdInAndRevenueDateBetween(clientVehicleIds, startDate, endDate);
+        List<MaintenanceRecord> maintenances = maintenanceRecordRepository.findAllByVehicleInAndMaintenanceDateBetween(clientVehicles, startDate, endDate);
+        List<Debt> debts = debtRepository.findAllByVehicleIdInAndDebtDateBetween(clientVehicleIds, startDate, endDate);
+
+        BigDecimal actualRevenue = revenues.stream()
+                .map(DailyRevenue::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal totalMaintenanceCost = maintenances.stream()
+                .map(MaintenanceRecord::getCost)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal totalDebt = debts.stream()
+                .map(Debt::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal balance = actualRevenue.subtract(totalMaintenanceCost).subtract(totalDebt);
+
+        List<ClientAccountSummary.ClientAccountEntry> entries = new ArrayList<>();
+        revenues.forEach(r -> entries.add(new ClientAccountSummary.ClientAccountEntry(
+                r.getRevenueDate(),
+                "REVENUE",
+                "Recette journalière",
+                r.getAmount(),
+                r.getVehicle().getMatricule(),
+                r.getVehicle().getId(),
+                r.getObservation(),
+                null
+        )));
+        maintenances.forEach(m -> entries.add(new ClientAccountSummary.ClientAccountEntry(
+                m.getMaintenanceDate(),
+                "MAINTENANCE",
+                m.getDescription(),
+                m.getCost().negate(),
+                m.getVehicle().getMatricule(),
+                m.getVehicle().getId(),
+                m.getType().name(),
+                m.getDocumentUrl()
+        )));
+        debts.forEach(d -> entries.add(new ClientAccountSummary.ClientAccountEntry(
+                d.getDebtDate(),
+                "DEBT",
+                d.getReason(),
+                d.getAmount().negate(),
+                d.getVehicle().getMatricule(),
+                d.getVehicle().getId(),
+                d.getTypeDebt(),
+                null
+        )));
+
+        entries.sort((a, b) -> a.date().compareTo(b.date()));
+
+        return new ClientAccountSummary(expectedRevenue, actualRevenue, balance, entries);
+    }
+
     public byte[] generateAuthenticatedClientInvoicePdf(LocalDate startDate, LocalDate endDate) {
         UUID companyId = authenticatedCompanyProvider.requireCompanyId();
         UserAccount currentUser = authenticatedUserProvider.requireUser();
@@ -119,10 +195,16 @@ public class InvoiceService {
         Client client = clientService.findByIdForCompany(clientId, companyId);
 
         List<DailyRevenue> revenues = dailyRevenueRepository
-                .findAllByVehicleCompanyIdAndVehicleClientIdAndRevenueDateBetween(companyId, clientId, startDate, endDate);
+                .findAllByVehicleCompanyIdAndVehicleClientIdAndRevenueDateBetween(companyId, clientId, startDate, endDate)
+                .stream()
+                .filter(r -> r.getRevenueDate().getDayOfWeek() != DayOfWeek.SUNDAY)
+                .collect(Collectors.toList());
 
         List<Debt> debts = debtRepository
-                .findAllByVehicleCompanyIdAndVehicleClientIdAndDebtDateBetween(companyId, clientId, startDate, endDate);
+                .findAllByVehicleCompanyIdAndVehicleClientIdAndDebtDateBetween(companyId, clientId, startDate, endDate)
+                .stream()
+                .filter(d -> d.getDebtDate().getDayOfWeek() != DayOfWeek.SUNDAY)
+                .collect(Collectors.toList());
 
         BigDecimal totalRevenue = revenues.stream()
                 .map(DailyRevenue::getAmount)
@@ -160,12 +242,14 @@ public class InvoiceService {
             addHeaderCell(revenueTable, "Vehicule");
             addHeaderCell(revenueTable, "Statut");
             addHeaderCell(revenueTable, "Montant");
+            addHeaderCell(revenueTable, "Observation");
 
             for (DailyRevenue revenue : revenues) {
                 revenueTable.addCell(revenue.getRevenueDate().toString());
                 revenueTable.addCell(revenue.getVehicle().getMatricule());
                 revenueTable.addCell(revenue.getActivityStatus().name());
                 revenueTable.addCell(revenue.getAmount().toPlainString());
+                revenueTable.addCell(revenue.getObservation() != null ? revenue.getObservation() : "");
             }
 
             document.add(new Paragraph("Recettes", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12)));
@@ -211,17 +295,13 @@ public class InvoiceService {
 
         UUID companyId = authenticatedCompanyProvider.requireCompanyId();
         Client client = clientService.findByIdForCompany(clientId, companyId);
-        List<Vehicle> vehicles = vehicleRepository.findByCompanyIdAndClientId(companyId, clientId);
-        List<UUID> vehicleIds = vehicles.stream().map(Vehicle::getId).toList();
-        List<MaintenanceRecord> maintenances = maintenanceRecordRepository
-                .findAllByVehicleCompanyIdAndMaintenanceDateBetween(companyId, startDate, endDate).stream()
-                .filter(item -> item.getVehicle() != null && vehicleIds.contains(item.getVehicle().getId()))
-                .sorted((left, right) -> left.getMaintenanceDate().compareTo(right.getMaintenanceDate()))
-                .toList();
 
-        BigDecimal totalCost = maintenances.stream()
-                .map(MaintenanceRecord::getCost)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        List<Vehicle> vehicles = vehicleRepository.findAllByCompanyIdAndClientId(companyId, clientId);
+        List<MaintenanceRecord> maintenances = maintenanceRecordRepository
+                .findAllByVehicleInAndMaintenanceDateBetween(vehicles, startDate, endDate)
+                .stream()
+                .filter(m -> m.getMaintenanceDate().getDayOfWeek() != DayOfWeek.SUNDAY)
+                .collect(Collectors.toList());
 
         ByteArrayOutputStream output = new ByteArrayOutputStream();
         Document document = new Document();
@@ -243,24 +323,19 @@ public class InvoiceService {
             maintenanceTable.setWidths(new float[]{1.6f, 1.8f, 1.8f, 3.0f, 2.0f, 1.6f});
             addHeaderCell(maintenanceTable, "Date");
             addHeaderCell(maintenanceTable, "Vehicule");
-            addHeaderCell(maintenanceTable, "Type");
             addHeaderCell(maintenanceTable, "Description");
-            addHeaderCell(maintenanceTable, "Prestataire");
-            addHeaderCell(maintenanceTable, "Total");
+            addHeaderCell(maintenanceTable, "Cout");
+            addHeaderCell(maintenanceTable, "Commentaire");
 
             for (MaintenanceRecord maintenance : maintenances) {
                 maintenanceTable.addCell(maintenance.getMaintenanceDate().toString());
                 maintenanceTable.addCell(maintenance.getVehicle().getMatricule());
-                maintenanceTable.addCell(maintenance.getType().name());
                 maintenanceTable.addCell(maintenance.getDescription());
-                maintenanceTable.addCell(maintenance.getProvider() == null ? "-" : maintenance.getProvider());
                 maintenanceTable.addCell(maintenance.getCost().toPlainString());
+                maintenanceTable.addCell(maintenance.getDocumentUrl() != null ? maintenance.getDocumentUrl() : "");
             }
 
             document.add(maintenanceTable);
-            document.add(new Paragraph(" "));
-            document.add(new Paragraph("Total maintenance: " + totalCost.toPlainString(), subtitleFont));
-            document.add(new Paragraph("Nombre d'interventions: " + maintenances.size(), subtitleFont));
         } catch (Exception ex) {
             throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "Unable to generate repair report PDF");
         } finally {

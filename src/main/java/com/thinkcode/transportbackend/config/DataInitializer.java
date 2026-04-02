@@ -233,21 +233,21 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private void seedRevenues(Map<String, Vehicle> vehicles) {
-        saveRevenue(vehicles.get("veh-001"), "2026-03-27", "12900", ActivityStatus.ACTIVE, "1433", "1911", "9556", "600");
-        saveRevenue(vehicles.get("veh-002"), "2026-03-27", "0", ActivityStatus.BREAKDOWN, "0", "0", "0", "0");
-        saveRevenue(vehicles.get("veh-003"), "2026-03-27", "5200", ActivityStatus.ACTIVE, "0", "800", "4400", "1300");
-        saveRevenue(vehicles.get("veh-004"), "2026-03-27", "3500", ActivityStatus.ACTIVE, "0", "1000", "2500", "0");
-        saveRevenue(vehicles.get("veh-005"), "2026-03-27", "0", ActivityStatus.SICK, "0", "0", "0", "0");
-        saveRevenue(vehicles.get("veh-006"), "2026-03-27", "7100", ActivityStatus.ACTIVE, "0", "1092", "6008", "0");
-        saveRevenue(vehicles.get("veh-007"), "2026-03-27", "0", ActivityStatus.PARKED, "0", "0", "0", "0");
-        saveRevenue(vehicles.get("veh-008"), "2026-03-27", "3100", ActivityStatus.ACTIVE, "0", "886", "2214", "400");
-        saveRevenue(vehicles.get("veh-001"), "2026-03-26", "13800", ActivityStatus.ACTIVE, "1500", "2044", "10256", "0");
-        saveRevenue(vehicles.get("veh-003"), "2026-03-26", "0", ActivityStatus.RAIN, "0", "0", "0", "0");
-        saveRevenue(vehicles.get("veh-004"), "2026-03-26", "2900", ActivityStatus.ACTIVE, "0", "829", "2071", "600");
-        saveRevenue(vehicles.get("veh-006"), "2026-03-25", "6200", ActivityStatus.ACTIVE, "0", "954", "5246", "300");
+        saveRevenue(vehicles.get("veh-001"), "2026-03-27", "12900", ActivityStatus.ACTIVE, "1433", "1911", "9556", "600", null);
+        saveRevenue(vehicles.get("veh-002"), "2026-03-27", "0", ActivityStatus.BREAKDOWN, "0", "0", "0", "0", "En panne");
+        saveRevenue(vehicles.get("veh-003"), "2026-03-27", "5200", ActivityStatus.ACTIVE, "0", "800", "4400", "1300", null);
+        saveRevenue(vehicles.get("veh-004"), "2026-03-27", "3500", ActivityStatus.ACTIVE, "0", "1000", "2500", "0", null);
+        saveRevenue(vehicles.get("veh-005"), "2026-03-27", "0", ActivityStatus.SICK, "0", "0", "0", "0", "Chauffeur malade");
+        saveRevenue(vehicles.get("veh-006"), "2026-03-27", "7100", ActivityStatus.ACTIVE, "0", "1092", "6008", "0", null);
+        saveRevenue(vehicles.get("veh-007"), "2026-03-27", "0", ActivityStatus.PARKED, "0", "0", "0", "0", "Au parc");
+        saveRevenue(vehicles.get("veh-008"), "2026-03-27", "3100", ActivityStatus.ACTIVE, "0", "886", "2214", "400", null);
+        saveRevenue(vehicles.get("veh-001"), "2026-03-26", "13800", ActivityStatus.ACTIVE, "1500", "2044", "10256", "0", null);
+        saveRevenue(vehicles.get("veh-003"), "2026-03-26", "0", ActivityStatus.RAIN, "0", "0", "0", "0", "Pluie");
+        saveRevenue(vehicles.get("veh-004"), "2026-03-26", "2900", ActivityStatus.ACTIVE, "0", "829", "2071", "600", null);
+        saveRevenue(vehicles.get("veh-006"), "2026-03-25", "6200", ActivityStatus.ACTIVE, "0", "954", "5246", "300", null);
     }
 
-    private void saveRevenue(Vehicle vehicle, String date, String amount, ActivityStatus status, String driverShare, String companyShare, String clientShare, String generatedDebt) {
+    private void saveRevenue(Vehicle vehicle, String date, String amount, ActivityStatus status, String driverShare, String companyShare, String clientShare, String generatedDebt, String observation) {
         DailyRevenue revenue = new DailyRevenue();
         revenue.setVehicle(vehicle);
         revenue.setRevenueDate(LocalDate.parse(date));
@@ -257,6 +257,7 @@ public class DataInitializer implements CommandLineRunner {
         revenue.setCompanyShare(new BigDecimal(companyShare));
         revenue.setClientShare(new BigDecimal(clientShare));
         revenue.setGeneratedDebt(new BigDecimal(generatedDebt));
+        revenue.setObservation(observation);
         dailyRevenueRepository.save(revenue);
     }
 

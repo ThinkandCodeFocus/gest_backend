@@ -39,6 +39,15 @@ public class RevenueRuleService {
         if (company == null) {
             throw new IllegalArgumentException("Company not found: " + companyId);
         }
+
+        RevenueRule existing = revenueRuleRepository.findByCompanyIdAndRuleType(companyId, rule.getRuleType()).orElse(null);
+        if (existing != null) {
+            existing.setRuleValue(rule.getRuleValue());
+            existing.setDescription(rule.getDescription());
+            existing.setActive(rule.getActive() != null ? rule.getActive() : true);
+            return revenueRuleRepository.save(existing);
+        }
+
         rule.setCompany(company);
         return revenueRuleRepository.save(rule);
     }
@@ -52,7 +61,7 @@ public class RevenueRuleService {
                 .map(existing -> {
                     existing.setRuleValue(rule.getRuleValue());
                     existing.setDescription(rule.getDescription());
-                    existing.setActive(rule.getActive());
+                    existing.setActive(rule.getActive() != null ? rule.getActive() : existing.getActive());
                     return revenueRuleRepository.save(existing);
                 })
                 .orElse(null);

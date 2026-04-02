@@ -23,6 +23,8 @@ public class Driver extends BaseEntity {
 
     private String licenseNumber;
 
+    private String documentUrl;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private RoleName role = RoleName.DRIVER;
@@ -72,6 +74,14 @@ public class Driver extends BaseEntity {
         this.licenseNumber = licenseNumber;
     }
 
+    public String getDocumentUrl() {
+        return documentUrl;
+    }
+
+    public void setDocumentUrl(String documentUrl) {
+        this.documentUrl = documentUrl;
+    }
+
     public RoleName getRole() {
         return role;
     }
@@ -112,4 +122,3 @@ public class Driver extends BaseEntity {
         this.company = company;
     }
 }
-

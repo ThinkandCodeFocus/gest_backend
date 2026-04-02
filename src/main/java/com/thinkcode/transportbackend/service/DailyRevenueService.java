@@ -67,6 +67,7 @@ public class DailyRevenueService {
         revenue.setAmount(request.amount());
         revenue.setActivityStatus(request.activityStatus());
         revenue.setNote(request.note());
+        revenue.setObservation(request.observation());
 
         if (request.activityStatus() == ActivityStatus.ACTIVE) {
             BigDecimal driverShare = defaultShare(
@@ -127,6 +128,7 @@ public class DailyRevenueService {
         revenue.setAmount(request.amount());
         revenue.setActivityStatus(request.activityStatus());
         revenue.setNote(request.note());
+        revenue.setObservation(request.observation());
 
         if (request.activityStatus() == ActivityStatus.ACTIVE) {
             BigDecimal driverShare = defaultShare(
@@ -173,6 +175,7 @@ public class DailyRevenueService {
                 revenue.getClientShare(),
                 revenue.getGeneratedDebt(),
                 revenue.getNote(),
+                revenue.getObservation(),
                 revenue.getVehicle() == null
                         ? null
                         : new DailyRevenueResponse.VehicleSummary(

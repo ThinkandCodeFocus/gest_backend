@@ -19,6 +19,9 @@ public record DebtResponse(
         BigDecimal montant,
         String statut,
         BigDecimal paidAmount,
-        BigDecimal remainingAmount
+        BigDecimal remainingAmount,
+        String validationStatus,
+        String createdBy,
+        String validatedBy
 ) {
 }

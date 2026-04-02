@@ -39,6 +39,15 @@ public class SettingsController {
         return systemSettingService.getAll();
     }
 
+    @PostMapping("/system")
+    @PreAuthorize("hasRole('ADMIN')")
+    public SystemSetting createSystemSetting(@Valid @RequestBody SystemSettingRequest request) {
+        SystemSetting setting = new SystemSetting();
+        setting.setSettingKey(request.settingKey());
+        setting.setSettingValue(request.settingValue());
+        setting.setDescription(request.description());
+        return systemSettingService.save(setting);
+    }
     @PutMapping("/system/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public SystemSetting updateSystemSetting(
@@ -115,3 +124,4 @@ public class SettingsController {
         );
     }
 }
+

@@ -39,7 +39,7 @@ public class HrController {
     }
 
     @PostMapping("/absences")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS_MANAGER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS_MANAGER', 'ASSISTANT')")
     public DriverAbsence createAbsence(@Valid @RequestBody DriverAbsenceRequest request) {
         return hrService.createAbsence(request);
     }

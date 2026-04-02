@@ -20,10 +20,12 @@ import com.thinkcode.transportbackend.repository.MaintenanceRecordRepository;
 import com.thinkcode.transportbackend.repository.VehicleRepository;
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -66,10 +68,22 @@ public class ReportingService {
         validateRange(startDate, endDate);
         UUID companyId = authenticatedCompanyProvider.requireCompanyId();
 
-        List<DailyRevenue> revenues = dailyRevenueRepository.findAllByVehicleCompanyIdAndRevenueDateBetween(companyId, startDate, endDate);
-        List<Debt> debts = debtRepository.findAllByVehicleCompanyIdAndDebtDateBetween(companyId, startDate, endDate);
-        List<MaintenanceRecord> maintenances = maintenanceRecordRepository.findAllByVehicleCompanyIdAndMaintenanceDateBetween(companyId, startDate, endDate);
-        List<FinancialEntry> entries = financialEntryRepository.findAllByCompanyIdAndEntryDateBetweenOrderByEntryDateAsc(companyId, startDate, endDate);
+        List<DailyRevenue> revenues = dailyRevenueRepository.findAllByVehicleCompanyIdAndRevenueDateBetween(companyId, startDate, endDate)
+                .stream()
+                .filter(r -> r.getRevenueDate().getDayOfWeek() != DayOfWeek.SUNDAY)
+                .collect(Collectors.toList());
+        List<Debt> debts = debtRepository.findAllByVehicleCompanyIdAndDebtDateBetween(companyId, startDate, endDate)
+                .stream()
+                .filter(d -> d.getDebtDate().getDayOfWeek() != DayOfWeek.SUNDAY)
+                .collect(Collectors.toList());
+        List<MaintenanceRecord> maintenances = maintenanceRecordRepository.findAllByVehicleCompanyIdAndMaintenanceDateBetween(companyId, startDate, endDate)
+                .stream()
+                .filter(m -> m.getMaintenanceDate().getDayOfWeek() != DayOfWeek.SUNDAY)
+                .collect(Collectors.toList());
+        List<FinancialEntry> entries = financialEntryRepository.findAllByCompanyIdAndEntryDateBetweenOrderByEntryDateAsc(companyId, startDate, endDate)
+                .stream()
+                .filter(e -> e.getEntryDate().getDayOfWeek() != DayOfWeek.SUNDAY)
+                .collect(Collectors.toList());
 
         BigDecimal totalRevenue = revenues.stream().map(DailyRevenue::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal totalDebt = debts.stream().map(Debt::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
