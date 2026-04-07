@@ -19,6 +19,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class DebtServiceOwnershipTest {
@@ -81,6 +82,7 @@ class DebtServiceOwnershipTest {
         UUID companyId = UUID.randomUUID();
 
         Debt debt = new Debt();
+        ReflectionTestUtils.setField(debt, "id", debtId);
         debt.setAmount(new BigDecimal("10000"));
         debt.setPaidAmount(BigDecimal.ZERO);
         debt.setStatus(DebtStatus.OPEN);
