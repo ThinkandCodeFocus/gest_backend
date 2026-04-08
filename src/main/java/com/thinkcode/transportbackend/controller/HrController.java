@@ -1,7 +1,7 @@
 package com.thinkcode.transportbackend.controller;
 
 import com.thinkcode.transportbackend.dto.DriverAbsenceRequest;
-import com.thinkcode.transportbackend.entity.DriverAbsence;
+import com.thinkcode.transportbackend.dto.DriverAbsenceResponse;
 import com.thinkcode.transportbackend.service.HrService;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
@@ -31,7 +31,7 @@ public class HrController {
 
     @GetMapping("/absences")
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS_MANAGER', 'ASSISTANT')")
-    public List<DriverAbsence> findAbsences(
+    public List<DriverAbsenceResponse> findAbsences(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
     ) {
@@ -40,13 +40,13 @@ public class HrController {
 
     @PostMapping("/absences")
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS_MANAGER', 'ASSISTANT')")
-    public DriverAbsence createAbsence(@Valid @RequestBody DriverAbsenceRequest request) {
+    public DriverAbsenceResponse createAbsence(@Valid @RequestBody DriverAbsenceRequest request) {
         return hrService.createAbsence(request);
     }
 
     @PutMapping("/absences/{absenceId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS_MANAGER')")
-    public DriverAbsence updateAbsence(@PathVariable UUID absenceId, @Valid @RequestBody DriverAbsenceRequest request) {
+    public DriverAbsenceResponse updateAbsence(@PathVariable UUID absenceId, @Valid @RequestBody DriverAbsenceRequest request) {
         return hrService.updateAbsence(absenceId, request);
     }
 

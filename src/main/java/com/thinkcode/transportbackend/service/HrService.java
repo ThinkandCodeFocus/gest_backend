@@ -1,6 +1,7 @@
 package com.thinkcode.transportbackend.service;
 
 import com.thinkcode.transportbackend.dto.DriverAbsenceRequest;
+import com.thinkcode.transportbackend.dto.DriverAbsenceResponse;
 import com.thinkcode.transportbackend.entity.Driver;
 import com.thinkcode.transportbackend.entity.DriverAbsence;
 import com.thinkcode.transportbackend.entity.RoleName;
@@ -41,12 +42,15 @@ public class HrService {
         this.auditLogService = auditLogService;
     }
 
-    public List<DriverAbsence> findAbsences(LocalDate startDate, LocalDate endDate) {
+    public List<DriverAbsenceResponse> findAbsences(LocalDate startDate, LocalDate endDate) {
         UUID companyId = authenticatedCompanyProvider.requireCompanyId();
-        return driverAbsenceRepository.findAllByCompanyIdAndStartDateBetweenOrderByStartDateAsc(companyId, startDate, endDate);
+        return driverAbsenceRepository.findAllByCompanyIdAndStartDateBetweenOrderByStartDateAsc(companyId, startDate, endDate)
+                .stream()
+                .map(this::mapAbsenceResponse)
+                .toList();
     }
 
-    public DriverAbsence createAbsence(DriverAbsenceRequest request) {
+    public DriverAbsenceResponse createAbsence(DriverAbsenceRequest request) {
         UUID companyId = authenticatedCompanyProvider.requireCompanyId();
         RoleName currentRole = authenticatedUserProvider.requireUser().getRole();
         if (request.endDate().isBefore(request.startDate())) {
@@ -69,10 +73,10 @@ public class HrService {
         driverRepository.save(driver);
 
         auditLogService.log("CREATE", "HR", saved.getId().toString(), null, "absence|" + driver.getFullName() + "|" + saved.isApproved());
-        return saved;
+        return mapAbsenceResponse(saved);
     }
 
-    public DriverAbsence updateAbsence(UUID absenceId, DriverAbsenceRequest request) {
+    public DriverAbsenceResponse updateAbsence(UUID absenceId, DriverAbsenceRequest request) {
         UUID companyId = authenticatedCompanyProvider.requireCompanyId();
         DriverAbsence absence = driverAbsenceRepository.findByIdAndCompanyId(absenceId, companyId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Absence not found"));
@@ -90,7 +94,7 @@ public class HrService {
         driverRepository.save(driver);
 
         auditLogService.log("UPDATE", "HR", saved.getId().toString(), before, saved.getStartDate() + "|" + saved.getEndDate() + "|" + saved.isApproved());
-        return saved;
+        return mapAbsenceResponse(saved);
     }
 
     public void deleteAbsence(UUID absenceId) {
@@ -108,5 +112,17 @@ public class HrService {
         if (currentRole == RoleName.OPERATIONS_MANAGER && driver.getRole() != RoleName.DRIVER && driver.getRole() != RoleName.ASSISTANT) {
             throw new ApiException(HttpStatus.FORBIDDEN, "Operations manager can only manage driver and assistant absences here");
         }
+    }
+
+    private DriverAbsenceResponse mapAbsenceResponse(DriverAbsence absence) {
+        return new DriverAbsenceResponse(
+                absence.getId(),
+                absence.getDriver().getId(),
+                absence.getDriver().getFullName(),
+                absence.getStartDate(),
+                absence.getEndDate(),
+                absence.getReason(),
+                absence.isApproved()
+        );
     }
 }
