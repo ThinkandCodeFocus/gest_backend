@@ -5,7 +5,8 @@ import jakarta.validation.constraints.NotBlank;
 public record ClientRequest(
         @NotBlank String name,
         String email,
-        String phoneNumber
+        String phoneNumber,
+        String password
 ) {
 }
 

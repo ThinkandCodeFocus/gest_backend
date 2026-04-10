@@ -3,27 +3,37 @@ package com.thinkcode.transportbackend.service;
 import com.thinkcode.transportbackend.dto.ClientRequest;
 import com.thinkcode.transportbackend.dto.ClientResponse;
 import com.thinkcode.transportbackend.entity.Client;
+import com.thinkcode.transportbackend.entity.RoleName;
+import com.thinkcode.transportbackend.entity.UserAccount;
 import com.thinkcode.transportbackend.repository.ClientRepository;
+import com.thinkcode.transportbackend.repository.UserAccountRepository;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
 public class ClientService {
 
     private final ClientRepository clientRepository;
+    private final UserAccountRepository userAccountRepository;
     private final CompanyResolver companyResolver;
     private final AuthenticatedCompanyProvider authenticatedCompanyProvider;
+    private final PasswordEncoder passwordEncoder;
 
     public ClientService(
             ClientRepository clientRepository,
+            UserAccountRepository userAccountRepository,
             CompanyResolver companyResolver,
-            AuthenticatedCompanyProvider authenticatedCompanyProvider
+            AuthenticatedCompanyProvider authenticatedCompanyProvider,
+            PasswordEncoder passwordEncoder
     ) {
         this.clientRepository = clientRepository;
+        this.userAccountRepository = userAccountRepository;
         this.companyResolver = companyResolver;
         this.authenticatedCompanyProvider = authenticatedCompanyProvider;
+        this.passwordEncoder = passwordEncoder;
     }
 
     public List<Client> findAll(UUID companyId) {
@@ -76,7 +86,9 @@ public class ClientService {
         client.setEmail(request.email());
         client.setPhoneNumber(request.phoneNumber());
         client.setCompany(companyResolver.require(authenticatedCompanyId));
-        return clientRepository.save(client);
+        Client saved = clientRepository.save(client);
+        syncUserAccount(saved, null, request.password(), authenticatedCompanyId);
+        return saved;
     }
 
     public ClientResponse createResponse(ClientRequest request) {
@@ -86,10 +98,13 @@ public class ClientService {
     public Client update(UUID clientId, ClientRequest request) {
         UUID authenticatedCompanyId = authenticatedCompanyProvider.requireCompanyId();
         Client client = findByIdForCompany(clientId, authenticatedCompanyId);
+        String previousEmail = client.getEmail();
         client.setName(request.name());
         client.setEmail(request.email());
         client.setPhoneNumber(request.phoneNumber());
-        return clientRepository.save(client);
+        Client saved = clientRepository.save(client);
+        syncUserAccount(saved, previousEmail, request.password(), authenticatedCompanyId);
+        return saved;
     }
 
     public ClientResponse updateResponse(UUID clientId, ClientRequest request) {
@@ -109,6 +124,45 @@ public class ClientService {
                 client.getEmail(),
                 client.getPhoneNumber()
         );
+    }
+
+    private void syncUserAccount(Client client, String previousEmail, String rawPassword, UUID companyId) {
+        String normalizedEmail = client.getEmail() == null ? null : client.getEmail().trim().toLowerCase();
+        String normalizedPreviousEmail = previousEmail == null ? null : previousEmail.trim().toLowerCase();
+
+        if (normalizedEmail == null || normalizedEmail.isBlank()) {
+            return;
+        }
+
+        if (normalizedPreviousEmail != null && !normalizedPreviousEmail.equals(normalizedEmail)) {
+            userAccountRepository.findByCompanyIdAndEmail(companyId, normalizedPreviousEmail)
+                    .ifPresent(existing -> {
+                        existing.setEmail(normalizedEmail);
+                        existing.setFullName(client.getName());
+                        existing.setRole(RoleName.CLIENT);
+                        if (rawPassword != null && !rawPassword.isBlank()) {
+                            existing.setPasswordHash(passwordEncoder.encode(rawPassword));
+                        }
+                        userAccountRepository.save(existing);
+                    });
+            return;
+        }
+
+        UserAccount account = userAccountRepository.findByCompanyIdAndEmail(companyId, normalizedEmail)
+                .orElseGet(UserAccount::new);
+        account.setCompany(companyResolver.require(companyId));
+        account.setFullName(client.getName());
+        account.setEmail(normalizedEmail);
+        account.setRole(RoleName.CLIENT);
+        if (account.getId() == null) {
+            if (rawPassword == null || rawPassword.isBlank()) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "A password is required to create a client account");
+            }
+            account.setPasswordHash(passwordEncoder.encode(rawPassword));
+        } else if (rawPassword != null && !rawPassword.isBlank()) {
+            account.setPasswordHash(passwordEncoder.encode(rawPassword));
+        }
+        userAccountRepository.save(account);
     }
 }
 
