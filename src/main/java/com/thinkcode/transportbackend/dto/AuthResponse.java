@@ -1,6 +1,7 @@
 package com.thinkcode.transportbackend.dto;
 
 import com.thinkcode.transportbackend.entity.RoleName;
+import java.time.Instant;
 import java.util.UUID;
 
 public record AuthResponse(
@@ -9,7 +10,9 @@ public record AuthResponse(
         String fullName,
         String email,
         RoleName role,
-        UUID companyId
+        UUID companyId,
+        Instant lastLoginAt,
+        boolean passwordChangeRequired
 ) {
 }
 

@@ -356,12 +356,15 @@ public class DriverService {
 
         UserAccount conflictingAccount = userAccountRepository.findByCompanyIdAndEmail(companyId, normalizedEmail).orElse(null);
         if (conflictingAccount != null && (account.getId() == null || !conflictingAccount.getId().equals(account.getId()))) {
-            throw new ApiException(HttpStatus.CONFLICT, "A user account already exists with this email");
+            return;
         }
 
         account.setFullName(driver.getFullName());
         account.setEmail(normalizedEmail);
         account.setRole(driver.getRole());
+        if (account.getId() == null) {
+            account.setPasswordChangeRequired(true);
+        }
         userAccountRepository.save(account);
     }
 }

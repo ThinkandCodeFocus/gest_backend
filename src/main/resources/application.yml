@@ -45,3 +45,5 @@ app:
   security:
     jwt-secret: ${JWT_SECRET:change-this-secret-in-production}
     jwt-expiration-minutes: 480
+  backup:
+    mysqldump-command: ${APP_BACKUP_MYSQLDUMP_COMMAND:mysqldump}

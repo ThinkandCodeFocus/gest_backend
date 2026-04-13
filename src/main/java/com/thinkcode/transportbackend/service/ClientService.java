@@ -159,6 +159,7 @@ public class ClientService {
                 throw new ApiException(HttpStatus.BAD_REQUEST, "A password is required to create a client account");
             }
             account.setPasswordHash(passwordEncoder.encode(rawPassword));
+            account.setPasswordChangeRequired(true);
         } else if (rawPassword != null && !rawPassword.isBlank()) {
             account.setPasswordHash(passwordEncoder.encode(rawPassword));
         }

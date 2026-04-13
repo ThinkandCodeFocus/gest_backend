@@ -1,15 +1,14 @@
 package com.thinkcode.transportbackend.dto;
 
-import com.thinkcode.transportbackend.entity.RoleName;
 import java.time.Instant;
 import java.util.UUID;
 
-public record AuthMeResponse(
-        UUID userId,
+public record UserManagementResponse(
+        UUID id,
         String fullName,
         String email,
-        RoleName role,
-        UUID companyId,
+        String role,
+        Instant createdAt,
         Instant lastLoginAt,
         boolean passwordChangeRequired
 ) {

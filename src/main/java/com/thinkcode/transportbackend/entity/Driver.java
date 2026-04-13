@@ -16,7 +16,7 @@ public class Driver extends BaseEntity {
     @Column(nullable = false)
     private String fullName;
 
-    @Column(unique = true)
+    @Column
     private String email;
 
     private String phoneNumber;

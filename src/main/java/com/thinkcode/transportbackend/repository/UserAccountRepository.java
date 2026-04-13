@@ -11,6 +11,10 @@ public interface UserAccountRepository extends JpaRepository<UserAccount, UUID> 
 
     Optional<UserAccount> findByCompanyIdAndEmail(UUID companyId, String email);
 
+    Optional<UserAccount> findByPasswordResetToken(String passwordResetToken);
+
+    java.util.List<UserAccount> findAllByCompanyIdOrderByFullNameAsc(UUID companyId);
+
     java.util.List<UserAccount> findAllByCompanyIdAndIdNotOrderByFullNameAsc(UUID companyId, UUID excludedUserId);
 }
 

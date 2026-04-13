@@ -6,11 +6,15 @@ import com.thinkcode.transportbackend.dto.SystemSettingRequest;
 import com.thinkcode.transportbackend.entity.RevenueRule;
 import com.thinkcode.transportbackend.entity.SystemSetting;
 import com.thinkcode.transportbackend.service.AuthenticatedCompanyProvider;
+import com.thinkcode.transportbackend.service.DatabaseBackupService;
 import com.thinkcode.transportbackend.service.RevenueRuleService;
 import com.thinkcode.transportbackend.service.SystemSettingService;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,15 +25,18 @@ public class SettingsController {
     private final SystemSettingService systemSettingService;
     private final RevenueRuleService revenueRuleService;
     private final AuthenticatedCompanyProvider authenticatedCompanyProvider;
+    private final DatabaseBackupService databaseBackupService;
 
     public SettingsController(
             SystemSettingService systemSettingService,
             RevenueRuleService revenueRuleService,
-            AuthenticatedCompanyProvider authenticatedCompanyProvider
+            AuthenticatedCompanyProvider authenticatedCompanyProvider,
+            DatabaseBackupService databaseBackupService
     ) {
         this.systemSettingService = systemSettingService;
         this.revenueRuleService = revenueRuleService;
         this.authenticatedCompanyProvider = authenticatedCompanyProvider;
+        this.databaseBackupService = databaseBackupService;
     }
 
     // System Settings - ADMIN ONLY
@@ -122,6 +129,16 @@ public class SettingsController {
             "PARKED",
             "MEETING"
         );
+    }
+
+    @GetMapping("/database/export")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<byte[]> exportDatabaseSql() {
+        DatabaseBackupService.DatabaseBackup backup = databaseBackupService.exportSqlDump();
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + backup.fileName() + "\"")
+                .body(backup.content());
     }
 }
 

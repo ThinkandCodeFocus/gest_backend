@@ -53,6 +53,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 @Component
 public class DataInitializer implements CommandLineRunner {
@@ -80,6 +81,7 @@ public class DataInitializer implements CommandLineRunner {
     private final String brevoApiKey;
     private final String brevoFromEmail;
     private final String brevoFromName;
+    private final JdbcTemplate jdbcTemplate;
 
     public DataInitializer(
             CompanyRepository companyRepository,
@@ -99,6 +101,7 @@ public class DataInitializer implements CommandLineRunner {
             AuditLogRepository auditLogRepository,
             JavaMailSender mailSender,
             PasswordEncoder passwordEncoder,
+            JdbcTemplate jdbcTemplate,
             @Value("${app.mail.from:no-reply@transport.local}") String senderEmail,
             @Value("${BREVO_API_KEY:}") String brevoApiKey,
             @Value("${MAIL_FROM_EMAIL:}") String brevoFromEmail,
@@ -121,6 +124,7 @@ public class DataInitializer implements CommandLineRunner {
         this.auditLogRepository = auditLogRepository;
         this.mailSender = mailSender;
         this.passwordEncoder = passwordEncoder;
+        this.jdbcTemplate = jdbcTemplate;
         this.senderEmail = senderEmail;
         this.brevoApiKey = brevoApiKey;
         this.brevoFromEmail = brevoFromEmail;
@@ -132,8 +136,31 @@ public class DataInitializer implements CommandLineRunner {
         // NOTE: This wipes the database on every backend startup.
         // Keep disabled in local/production once the client starts adding data.
         // clearDatabase();
+        relaxDriverEmailUniqueConstraint();
         // NOTE: Automatic bootstrap creation is disabled.
         // The client account and production data already exist in database.
+    }
+
+    private void relaxDriverEmailUniqueConstraint() {
+        try {
+            var indexNames = jdbcTemplate.queryForList(
+                    """
+                    SELECT DISTINCT index_name
+                    FROM information_schema.statistics
+                    WHERE table_schema = DATABASE()
+                      AND table_name = 'driver'
+                      AND column_name = 'email'
+                      AND non_unique = 0
+                      AND index_name <> 'PRIMARY'
+                    """,
+                    String.class
+            );
+            for (String indexName : indexNames) {
+                jdbcTemplate.execute("ALTER TABLE driver DROP INDEX " + indexName);
+            }
+        } catch (Exception ex) {
+            logger.debug("Driver email unique index already relaxed or unavailable", ex);
+        }
     }
 
     private void clearDatabase() {
